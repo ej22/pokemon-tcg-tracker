@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tcg-net
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      POKEWALLET_API_KEY: ${POKEWALLET_API_KEY}
+      PRICE_CACHE_TTL_HOURS: ${PRICE_CACHE_TTL_HOURS:-24}
+      SET_CACHE_TTL_DAYS: ${SET_CACHE_TTL_DAYS:-7}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8014:8000"
+    networks:
+      - tcg-net
+
+  frontend:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/srv
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+    ports:
+      - "3003:3000"
+    depends_on:
+      - backend
+    networks:
+      - tcg-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    ports:
+      - "8015:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - tcg-net
+
+volumes:
+  postgres_data:
+
+networks:
+  tcg-net:
+    driver: bridge
