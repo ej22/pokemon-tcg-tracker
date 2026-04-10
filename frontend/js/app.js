@@ -35,13 +35,28 @@ window.addEventListener('hashchange', routeFromHash);
 window.addEventListener('DOMContentLoaded', routeFromHash);
 
 // ── Toast ────────────────────────────────────────────────────────
-const toastEl = document.getElementById('toast');
-let toastTimer;
+const toastContainer = document.getElementById('toast-container');
+
 function toast(msg, type = 'success') {
-  toastEl.textContent = msg;
-  toastEl.className = `toast ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 3500);
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  toastContainer.appendChild(el);
+
+  const dismiss = () => {
+    el.style.animation = 'toast-out 200ms var(--ease) forwards';
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  };
+  const timer = setTimeout(dismiss, 3500);
+  el.addEventListener('click', () => { clearTimeout(timer); dismiss(); });
+}
+
+// ── Sidebar stats ────────────────────────────────────────────────
+function updateSidebarStats(totalCards, valueEur) {
+  const countEl = document.getElementById('sidebar-total-cards');
+  const valueEl = document.getElementById('sidebar-value');
+  if (countEl) countEl.textContent = totalCards != null ? totalCards : '—';
+  if (valueEl) valueEl.textContent = valueEur != null ? `€${parseFloat(valueEur).toFixed(2)}` : '—';
 }
 
 // ── Fetch helpers ────────────────────────────────────────────────
@@ -72,7 +87,7 @@ function fmtDate(iso) {
 function pnlHtml(purchasePrice, currentPrice, qty) {
   if (purchasePrice == null || currentPrice == null) return '<span class="text-muted">—</span>';
   const diff = (parseFloat(currentPrice) - parseFloat(purchasePrice)) * (qty || 1);
-  const cls = diff >= 0 ? 'pnl-positive' : 'pnl-negative';
+  const cls = diff >= 0 ? 'cell-pnl-pos' : 'cell-pnl-neg';
   const sign = diff >= 0 ? '+' : '';
   return `<span class="${cls}">${sign}€${diff.toFixed(2)}</span>`;
 }
