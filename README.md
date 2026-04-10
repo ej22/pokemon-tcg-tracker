@@ -89,6 +89,10 @@ PokéWallet free tier allows ~1,000 calls/day and ~100/hour. The backend:
 - Resets both counters on schedule (hourly / daily)
 - If the nightly scheduler hits the hourly limit mid-run it pauses and resumes the next night
 
+## PokéWallet Data Gaps
+
+PokéWallet's database does not contain every card. Newer sets in particular may be listed in the sets index but only partially populated. If a card search returns no results, it means PokéWallet hasn't added it yet — this is outside the app's control. You can periodically check whether the set's card count in the Sets browser has grown to confirm when new cards are added.
+
 ## Scheduled Jobs
 
 | Job                    | Schedule           | What it does                              |

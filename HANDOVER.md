@@ -69,6 +69,19 @@ Complete build log and reference for the PokéTCG Tracker project.
 - Frontend serves at `http://localhost:3003`
 - pgAdmin accessible at `http://localhost:8015`
 
+### Phase 8 — Post-build fixes (sets API field mapping)
+Discovered while investigating a missing card (Tyrunt MEP070):
+
+**Problem 1:** `pokewallet.get_sets()` looked for a `results` or `sets` key in the response, but the actual sets API returns `{"success": true, "data": [...]}`. Result: `GET /api/sets` always returned an empty list from the API, so the sets browser never populated.
+
+**Problem 2:** `routers/sets.py` and `scheduler.py` used wrong field names when parsing set objects — `groupId`/`abbreviation`/`publishedOn`/`totalCards` — but the actual API uses `set_id`/`set_code`/`release_date`/`card_count`. Even if data had been fetched, it would have been stored with all null fields.
+
+**Problem 3:** The set-detail endpoint (`GET /sets/{setCode}`) returns `{"success": true, "set": {...}, "cards": [...]}`. The `cards` key was correct but the wrapper handling needed to guard against the disambiguation case (`{"sets": [...]}`) more carefully.
+
+**Fix:** Updated `pokewallet.get_sets()` to check for `data` key first. Updated field mappings in `routers/sets.py` and `scheduler.py` to use the correct API field names. Invalidated existing placeholder sets in the DB (`UPDATE sets SET last_fetched_at = '2000-01-01'`) to force a fresh fetch on next request. After fix, `GET /api/sets` correctly returns all 763 sets including MEP.
+
+**Root cause of missing Tyrunt:** The MEP set ("ME: Mega Evolution Promo", set_code `MEP`, set_id `24451`) exists in PokéWallet's index with 29 listed cards, but only 19 cards are actually in their database. Tyrunt MEP070 is not among them. This is a gap in PokéWallet's data for this newer set (released October 2025) — nothing can be done on our end until they add it.
+
 ---
 
 ## 3. Architecture Decisions
@@ -88,7 +101,7 @@ Complete build log and reference for the PokéTCG Tracker project.
 
 ## 4. Known Issues / Limitations
 
-- **Sets browser shows placeholder sets** until the weekly sets refresh runs or you visit `/api/sets` manually (which triggers a fetch). The sets cache is empty on first boot; call `GET /api/sets` or wait for Sunday's job.
+- **Sets browser on first boot:** visiting `http://localhost:3003/#sets` (or calling `GET /api/sets`) triggers the first fetch of all sets from PokéWallet (~763 sets). This makes one API call and takes a few seconds. After that, sets are cached for 7 days.
 - **Rate limit counters are in-memory** — restart resets them. A heavy manual refresh shortly after a restart could momentarily exceed the daily limit before the counter catches up. Low risk in practice given the 1000/day free tier.
 - **No authentication** — the app is intended for a private server behind Tailscale. Do not expose port 3003/8014 to the public internet.
 - **Price history chart requires 2+ days** of data before it renders. On day one, the chart area shows a "Not enough data" message.
@@ -214,7 +227,17 @@ APScheduler's `AsyncIOScheduler` starts in FastAPI's `lifespan` context manager.
 
 ### Response structure (important)
 
-Card responses nest data under `card_info`:
+**Sets list** (`GET /sets`):
+```json
+{ "success": true, "data": [ { "set_id": "24451", "set_code": "MEP", "name": "...", "card_count": 29, "language": "eng", "release_date": "10th October, 2025" }, ... ] }
+```
+
+**Set detail** (`GET /sets/{setCode}`):
+```json
+{ "success": true, "set": { ... }, "cards": [ { "id": "pk_...", "card_info": { ... }, "cardmarket": { ... } }, ... ] }
+```
+
+**Card / search results** — card info nested under `card_info`:
 ```json
 {
   "id": "pk_...",
@@ -228,13 +251,16 @@ Card responses nest data under `card_info`:
 }
 ```
 
-`_normalise_card()` in `pokewallet.py` flattens this to a consistent dict used throughout the app.
+`_normalise_card()` in `pokewallet.py` flattens the `card_info` structure to a consistent dict used throughout the app.
 
 ### Card ID format
 IDs are hex hashes prefixed with `pk_` (e.g. `pk_11151dbc98a3...`). There is no separate numeric ID — always use the full `pk_` string as the primary key.
 
 ### Disambiguation (sets)
-`GET /sets/{setCode}` can return `{"sets": [...]}` when multiple sets match a code. The app detects this and returns an empty list; the set cards view will show no results until a more specific call is possible.
+`GET /sets/{setCode}` can return `{"sets": [...]}` when multiple sets match a code. The app detects this (`"sets"` key present, no `"cards"` key) and returns an empty list.
+
+### Data gaps
+PokéWallet's database is incomplete for some sets, especially newer releases. A set may appear in the index with a card count but have fewer cards actually available via the API. If a card search returns no results, the card simply hasn't been added to PokéWallet yet.
 
 ---
 
