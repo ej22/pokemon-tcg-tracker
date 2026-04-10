@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéTCG Tracker</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <span class="navbar-brand">&#9670; PokéTCG Tracker</span>
+    <div class="nav-links">
+      <a href="#collection" class="nav-link active" data-view="collection">Collection</a>
+      <a href="#portfolio"  class="nav-link"        data-view="portfolio">Portfolio</a>
+      <a href="#sets"       class="nav-link"        data-view="sets">Sets</a>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- ── Collection View ─────────────────────────────────────── -->
+    <section id="view-collection" class="view active">
+      <div class="view-header">
+        <h1>My Collection</h1>
+        <button class="btn btn-primary" id="btn-add-card">+ Add Card</button>
+      </div>
+
+      <div id="collection-loading" class="loading-msg">Loading collection…</div>
+      <div id="collection-empty"   class="empty-msg hidden">No cards yet — click <strong>+ Add Card</strong> to get started.</div>
+
+      <div class="table-wrap">
+        <table id="collection-table" class="data-table hidden">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Set</th>
+              <th>#</th>
+              <th>Lang</th>
+              <th>Variant</th>
+              <th>Cond</th>
+              <th>Qty</th>
+              <th>Bought (EUR)</th>
+              <th>Price EUR</th>
+              <th>P&amp;L</th>
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="collection-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Portfolio View ──────────────────────────────────────── -->
+    <section id="view-portfolio" class="view hidden">
+      <div class="view-header">
+        <h1>Portfolio</h1>
+        <button class="btn btn-secondary" id="btn-refresh-prices">&#8635; Refresh Prices</button>
+      </div>
+
+      <div id="portfolio-loading" class="loading-msg">Loading portfolio…</div>
+
+      <div id="portfolio-content" class="hidden">
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="summary-value" id="summary-total-cards">—</div>
+            <div class="summary-label">Total Cards</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value" id="summary-unique-cards">—</div>
+            <div class="summary-label">Unique Cards</div>
+          </div>
+          <div class="summary-card accent">
+            <div class="summary-value" id="summary-value-eur">—</div>
+            <div class="summary-label">Est. Value (EUR)</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value" id="summary-priced">—</div>
+            <div class="summary-label">Cards Priced</div>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <h2>Portfolio Value Over Time</h2>
+          <div class="chart-wrap">
+            <canvas id="portfolio-chart"></canvas>
+          </div>
+          <p id="chart-no-data" class="empty-msg hidden">Not enough price history to show a chart yet.</p>
+        </div>
+
+        <h2>Value by Set</h2>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Set</th><th>Cards</th><th>Value (EUR)</th></tr>
+            </thead>
+            <tbody id="set-value-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Sets View ───────────────────────────────────────────── -->
+    <section id="view-sets" class="view hidden">
+      <div class="view-header">
+        <h1>Sets</h1>
+      </div>
+
+      <div id="sets-loading" class="loading-msg">Loading sets…</div>
+      <div id="sets-empty" class="empty-msg hidden">No sets cached yet.</div>
+
+      <div id="sets-grid" class="sets-grid hidden"></div>
+
+      <!-- Set detail panel -->
+      <div id="set-detail" class="hidden">
+        <button class="btn btn-secondary" id="btn-back-sets">&#8592; Back to Sets</button>
+        <h2 id="set-detail-title"></h2>
+        <div id="set-cards-loading" class="loading-msg hidden">Loading cards…</div>
+        <div class="table-wrap">
+          <table class="data-table" id="set-cards-table">
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Rarity</th><th>Type</th><th>HP</th><th>Action</th></tr>
+            </thead>
+            <tbody id="set-cards-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Search / Add Card Modal ─────────────────────────────── -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add Card to Collection</h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Step 1: Search -->
+        <div id="modal-step-search">
+          <div class="input-group">
+            <input type="text" id="search-input" class="input" placeholder="Search by card name…" autocomplete="off" />
+            <button class="btn btn-primary" id="btn-search">Search</button>
+          </div>
+          <div id="search-loading" class="loading-msg hidden">Searching…</div>
+          <div id="search-results" class="search-results"></div>
+        </div>
+
+        <!-- Step 2: Add form (shown after picking a card) -->
+        <div id="modal-step-form" class="hidden">
+          <div class="selected-card-info" id="selected-card-info"></div>
+
+          <form id="add-card-form" class="add-form">
+            <div class="form-row">
+              <label>Quantity
+                <input type="number" name="quantity" value="1" min="1" class="input" />
+              </label>
+              <label>Condition
+                <select name="condition" class="input">
+                  <option value="NM">NM</option>
+                  <option value="LP">LP</option>
+                  <option value="MP">MP</option>
+                  <option value="HP">HP</option>
+                  <option value="DMG">DMG</option>
+                </select>
+              </label>
+              <label>Language
+                <input type="text" name="language" value="English" class="input" />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>Variant
+                <select name="variant" id="variant-select" class="input">
+                  <option value="">— select —</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Holofoil">Holofoil</option>
+                  <option value="Reverse Holofoil">Reverse Holofoil</option>
+                </select>
+              </label>
+              <label>Purchase Price (EUR)
+                <input type="number" name="purchase_price" step="0.01" min="0" placeholder="0.00" class="input" />
+              </label>
+              <label>Date Acquired
+                <input type="date" name="date_acquired" class="input" />
+              </label>
+            </div>
+            <div class="form-row">
+              <label class="full-width">Notes
+                <textarea name="notes" class="input" rows="2" placeholder="Optional notes…"></textarea>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="btn-back-search">&#8592; Back</button>
+              <button type="submit" class="btn btn-primary">Add to Collection</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Edit Modal ──────────────────────────────────────────── -->
+  <div id="edit-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Entry</h2>
+        <button class="modal-close" id="edit-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-card-form" class="add-form">
+          <input type="hidden" name="entry_id" />
+          <div class="form-row">
+            <label>Quantity
+              <input type="number" name="quantity" min="1" class="input" />
+            </label>
+            <label>Condition
+              <select name="condition" class="input">
+                <option value="NM">NM</option>
+                <option value="LP">LP</option>
+                <option value="MP">MP</option>
+                <option value="HP">HP</option>
+                <option value="DMG">DMG</option>
+              </select>
+            </label>
+            <label>Language
+              <input type="text" name="language" class="input" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label>Variant
+              <input type="text" name="variant" class="input" />
+            </label>
+            <label>Purchase Price (EUR)
+              <input type="number" name="purchase_price" step="0.01" min="0" class="input" />
+            </label>
+            <label>Date Acquired
+              <input type="date" name="date_acquired" class="input" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="full-width">Notes
+              <textarea name="notes" class="input" rows="2"></textarea>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/app.js"></script>
+  <script src="js/collection.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/portfolio.js"></script>
+  <script src="js/sets.js"></script>
+</body>
+</html>
