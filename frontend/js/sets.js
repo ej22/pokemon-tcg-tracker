@@ -97,7 +97,7 @@ function renderSetCards(cards) {
       ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem">${c.rarity}</span>`
       : '';
 
-    const imgContent = `<img src="${imageUrl}" alt="${c.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
+    const imgContent = `<img src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
 
     return `
       <div class="poster-card set-poster-card">

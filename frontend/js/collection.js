@@ -78,7 +78,7 @@ function renderCollection(entries) {
         : `<span class="poster-pnl-dot pnl-neg" title="€${diff.toFixed(2)}"></span>`;
     }
 
-    const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
+    const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
 
     return `
       <div class="poster-card" role="button" tabindex="0"
