@@ -31,6 +31,7 @@ class CardOut(BaseModel):
     card_type: Optional[str]
     hp: Optional[str]
     stage: Optional[str]
+    image_url: Optional[str]
     last_fetched_at: datetime
 
     model_config = {"from_attributes": True}

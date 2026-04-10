@@ -1,40 +1,26 @@
 /* ── Collection view ──────────────────────────────────────────── */
 
-const collectionTable = document.getElementById('collection-table');
-const collectionTbody = document.getElementById('collection-tbody');
+const collectionGrid  = document.getElementById('collection-grid');
 const collectionEmpty = document.getElementById('collection-empty');
 
 async function loadCollection() {
-  showSkeletonRows();
-  collectionTable.classList.remove('hidden');
-  collectionEmpty.classList.add('hidden');
+  showSkeletonCards();
 
   try {
     const entries = await apiFetch('/collection');
     renderCollection(entries);
   } catch (e) {
     toast(`Failed to load collection: ${e.message}`, 'error');
-    collectionTbody.innerHTML = '';
+    collectionGrid.innerHTML = '';
   }
 }
 
-function showSkeletonRows(n = 6) {
-  collectionTbody.innerHTML = Array.from({ length: n }, () => `
-    <tr class="skeleton-row">
-      <td><div class="skeleton skeleton-cell" style="width:75%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:55%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:35%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:50%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:55%"></div></td>
-      <td><div class="skeleton skeleton-badge"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:25%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:50%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:55%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:55%"></div></td>
-      <td><div class="skeleton skeleton-cell" style="width:55%"></div></td>
-      <td></td>
-    </tr>
-  `).join('');
+function showSkeletonCards(n = 12) {
+  collectionGrid.classList.remove('hidden');
+  collectionEmpty.classList.add('hidden');
+  collectionGrid.innerHTML = Array.from({ length: n }, () =>
+    `<div class="poster-skeleton skeleton"></div>`
+  ).join('');
 }
 
 function conditionChip(cond) {
@@ -60,61 +46,83 @@ function renderCollection(entries) {
   }
 
   if (!entries.length) {
-    collectionTbody.innerHTML = '';
+    collectionGrid.innerHTML = '';
+    collectionGrid.classList.add('hidden');
     collectionEmpty.classList.remove('hidden');
     updateSidebarStats(0, null);
     return;
   }
 
+  collectionEmpty.classList.add('hidden');
+  collectionGrid.classList.remove('hidden');
+
   let totalValue = 0;
   let totalCards = 0;
 
-  collectionTbody.innerHTML = entries.map(e => {
+  collectionGrid.innerHTML = entries.map(e => {
     const price = bestPrice(e.prices, e.variant);
-    const lastUpdated = e.prices?.[0]?.last_fetched_at
-      ? fmtDate(e.prices[0].last_fetched_at)
-      : '<span class="text-muted">—</span>';
-
     if (price != null) totalValue += parseFloat(price) * (e.quantity || 1);
     totalCards += (e.quantity || 1);
 
-    const priceHtml = price != null
-      ? `<span class="cell-price">€${parseFloat(price).toFixed(2)}</span>`
-      : '<span class="text-muted">—</span>';
-
-    const boughtHtml = e.purchase_price != null
-      ? `<span class="cell-mono">€${parseFloat(e.purchase_price).toFixed(2)}</span>`
-      : '<span class="text-muted">—</span>';
-
+    const priceStr  = price != null ? `€${parseFloat(price).toFixed(2)}` : null;
+    const imageUrl  = e.card.image_url || '';
     const entryJson = JSON.stringify(e).replace(/"/g, '&quot;');
+    const qty       = e.quantity > 1 ? `<span class="poster-qty-badge">×${e.quantity}</span>` : '';
+
+    // P&L indicator dot
+    let pnlDot = '';
+    if (e.purchase_price != null && price != null) {
+      const diff = parseFloat(price) - parseFloat(e.purchase_price);
+      pnlDot = diff >= 0
+        ? `<span class="poster-pnl-dot pnl-pos" title="+€${diff.toFixed(2)}"></span>`
+        : `<span class="poster-pnl-dot pnl-neg" title="€${diff.toFixed(2)}"></span>`;
+    }
+
+    const imgContent = imageUrl
+      ? `<img src="${imageUrl}" alt="${e.card.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`
+      : `<div class="poster-placeholder"><div class="poster-placeholder-icon">P</div></div>`;
 
     return `
-      <tr>
-        <td><strong>${e.card.name}</strong></td>
-        <td><span class="cell-mono">${e.card.set_code || '<span class="text-muted">—</span>'}</span></td>
-        <td><span class="cell-mono">${e.card.card_number || '<span class="text-muted">—</span>'}</span></td>
-        <td>${e.language}</td>
-        <td>${e.variant || '<span class="text-muted">—</span>'}</td>
-        <td>${conditionChip(e.condition)}</td>
-        <td><span class="cell-mono">${e.quantity}</span></td>
-        <td>${boughtHtml}</td>
-        <td>${priceHtml}</td>
-        <td>${pnlHtml(e.purchase_price, price, e.quantity)}</td>
-        <td><span class="cell-mono" style="font-size:0.775rem">${lastUpdated}</span></td>
-        <td style="white-space:nowrap">
-          <button class="btn btn-ghost btn-icon btn-sm" title="Edit"
+      <div class="poster-card" role="button" tabindex="0"
+           aria-label="${e.card.name}"
+           onclick="openEditModal(${entryJson})"
+           onkeydown="if(event.key==='Enter')openEditModal(${entryJson})">
+        ${imgContent}
+
+        <div class="poster-badges">
+          ${conditionChip(e.condition)}
+          ${qty}
+        </div>
+
+        <div class="poster-actions" onclick="event.stopPropagation()">
+          <button class="poster-action-btn poster-action-edit" title="Edit"
             onclick="openEditModal(${entryJson})">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
           </button>
-          <button class="btn btn-ghost btn-icon btn-sm" title="Remove" style="color:var(--red)"
+          <button class="poster-action-btn poster-action-delete" title="Remove"
             onclick="deleteEntry(${e.id})">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
           </button>
-        </td>
-      </tr>`;
+        </div>
+
+        <div class="poster-overlay">
+          <div class="poster-name">${e.card.name}</div>
+          <div class="poster-meta">
+            <span>${e.card.set_code || ''}${e.card.card_number ? ` · ${e.card.card_number}` : ''}</span>
+            <span class="poster-price-row">
+              ${pnlDot}
+              ${priceStr ? `<span class="poster-price">${priceStr}</span>` : '<span class="poster-no-price">—</span>'}
+            </span>
+          </div>
+        </div>
+      </div>`;
   }).join('');
 
   updateSidebarStats(totalCards, totalValue > 0 ? totalValue : null);
+}
+
+function cardPlaceholder() {
+  return `<div class="poster-placeholder"><div class="poster-placeholder-icon">P</div></div>`;
 }
 
 async function deleteEntry(id) {

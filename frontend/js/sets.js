@@ -6,7 +6,7 @@ const setsGrid       = document.getElementById('sets-grid');
 const setDetail      = document.getElementById('set-detail');
 const setDetailTitle = document.getElementById('set-detail-title');
 const setCardsLoading = document.getElementById('set-cards-loading');
-const setCardsTbody  = document.getElementById('set-cards-tbody');
+const setCardsGrid   = document.getElementById('set-cards-grid');
 const btnBackSets    = document.getElementById('btn-back-sets');
 
 async function loadSets() {
@@ -62,8 +62,13 @@ async function openSetDetail(set) {
   setsGrid.classList.add('hidden');
   setDetail.classList.remove('hidden');
   setDetailTitle.textContent = `${set.name}${set.set_code ? ` (${set.set_code})` : ''}`;
-  setCardsTbody.innerHTML = '';
+  setCardsGrid.innerHTML = '';
   setCardsLoading.classList.remove('hidden');
+
+  // Show skeleton while loading
+  setCardsGrid.innerHTML = Array.from({ length: 12 }, () =>
+    `<div class="poster-skeleton skeleton"></div>`
+  ).join('');
 
   try {
     const cards = await apiFetch(`/sets/${set.set_id}/cards`);
@@ -71,36 +76,55 @@ async function openSetDetail(set) {
   } catch (e) {
     toast(`Failed to load set cards: ${e.message}`, 'error');
   } finally {
+    setCardsLoading.classList.remove('hidden');
     setCardsLoading.classList.add('hidden');
   }
 }
 
 function renderSetCards(cards) {
   if (!cards.length) {
-    setCardsTbody.innerHTML = `
-      <tr>
-        <td colspan="6" style="text-align:center;padding:2rem;font-size:0.825rem;color:var(--text-subtle)">
-          No cards cached for this set.
-        </td>
-      </tr>`;
+    setCardsGrid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:3rem 2rem;font-size:0.825rem;color:var(--text-subtle)">
+        No cards cached for this set yet.
+      </div>`;
     return;
   }
 
-  setCardsTbody.innerHTML = cards.map(c => `
-    <tr>
-      <td><span class="cell-mono">${c.card_number || '—'}</span></td>
-      <td><strong>${c.name}</strong></td>
-      <td>${c.rarity || '<span class="text-muted">—</span>'}</td>
-      <td>${c.card_type || '<span class="text-muted">—</span>'}</td>
-      <td><span class="cell-mono">${c.hp || '—'}</span></td>
-      <td>
-        <button class="btn btn-primary btn-sm"
-          onclick="addCardFromSet(${JSON.stringify(c).replace(/"/g, '&quot;')})">
-          + Add
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  setCardsGrid.innerHTML = cards.map(c => {
+    const imageUrl  = c.image_url || '';
+    const cardJson  = JSON.stringify(c).replace(/"/g, '&quot;');
+    const rarityBadge = c.rarity
+      ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem">${c.rarity}</span>`
+      : '';
+
+    const imgContent = imageUrl
+      ? `<img src="${imageUrl}" alt="${c.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`
+      : `<div class="poster-placeholder"><div class="poster-placeholder-icon">P</div></div>`;
+
+    return `
+      <div class="poster-card set-poster-card">
+        ${imgContent}
+
+        <div class="poster-badges">
+          ${rarityBadge}
+        </div>
+
+        <div class="poster-actions" onclick="event.stopPropagation()">
+          <button class="poster-action-btn poster-action-add" title="Add to collection"
+            onclick="addCardFromSet(${cardJson})">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          </button>
+        </div>
+
+        <div class="poster-overlay">
+          <div class="poster-name">${c.name}</div>
+          <div class="poster-meta">
+            <span class="poster-card-number">${c.card_number || ''}</span>
+            ${c.hp ? `<span>HP ${c.hp}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function addCardFromSet(card) {

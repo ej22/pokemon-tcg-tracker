@@ -89,41 +89,20 @@
         </div>
       </div>
 
-      <div class="table-container">
-        <div class="table-scroll">
-          <table class="data-table" id="collection-table" aria-label="Card collection">
-            <thead>
-              <tr>
-                <th>Card</th>
-                <th>Set</th>
-                <th>#</th>
-                <th>Language</th>
-                <th>Variant</th>
-                <th>Cond.</th>
-                <th>Qty</th>
-                <th>Bought</th>
-                <th>Price (EUR)</th>
-                <th>P&amp;L</th>
-                <th>Updated</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="collection-tbody">
-              <!-- skeleton rows injected by JS -->
-            </tbody>
-          </table>
+      <div id="collection-grid" class="card-grid" aria-label="Card collection">
+        <!-- skeleton cards injected by JS -->
+      </div>
+
+      <div id="collection-empty" class="empty-state hidden">
+        <div class="empty-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" /></svg>
         </div>
-        <div id="collection-empty" class="empty-state hidden">
-          <div class="empty-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" /></svg>
-          </div>
-          <p class="empty-title">No cards yet</p>
-          <p class="empty-desc">Add your first card to start tracking your collection and portfolio value.</p>
-          <button class="btn btn-primary" onclick="openAddModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Add your first card
-          </button>
-        </div>
+        <p class="empty-title">No cards yet</p>
+        <p class="empty-desc">Add your first card to start tracking your collection and portfolio value.</p>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          Add your first card
+        </button>
       </div>
     </section>
 
@@ -230,14 +209,7 @@
 
         <div id="set-cards-loading" class="hidden" style="padding:2rem;text-align:center;color:var(--text-subtle);font-size:0.825rem">Loading cards…</div>
 
-        <div class="table-container">
-          <div class="table-scroll">
-            <table class="data-table" id="set-cards-table" aria-label="Set cards" style="min-width:500px">
-              <thead><tr><th>#</th><th>Name</th><th>Rarity</th><th>Type</th><th>HP</th><th></th></tr></thead>
-              <tbody id="set-cards-tbody"></tbody>
-            </table>
-          </div>
-        </div>
+        <div id="set-cards-grid" class="card-grid"></div>
       </div>
     </section>
 

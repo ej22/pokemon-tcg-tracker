@@ -65,6 +65,7 @@ async def _upsert_card_metadata(session: AsyncSession, raw_card_data: dict) -> N
         existing.card_type = info.get("card_type") or raw_card_data.get("card_type")
         existing.hp = info.get("hp") or raw_card_data.get("hp")
         existing.stage = info.get("stage") or raw_card_data.get("stage")
+        existing.image_url = info.get("image_url") or raw_card_data.get("image_url") or existing.image_url
         existing.last_fetched_at = now
     else:
         card = Card(
@@ -78,6 +79,7 @@ async def _upsert_card_metadata(session: AsyncSession, raw_card_data: dict) -> N
             card_type=info.get("card_type") or raw_card_data.get("card_type"),
             hp=info.get("hp") or raw_card_data.get("hp"),
             stage=info.get("stage") or raw_card_data.get("stage"),
+            image_url=info.get("image_url") or raw_card_data.get("image_url") or None,
             last_fetched_at=now,
         )
         session.add(card)

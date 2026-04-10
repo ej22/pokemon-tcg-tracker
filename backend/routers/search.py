@@ -56,6 +56,7 @@ async def search(
                 card_type=card["card_type"] or None,
                 hp=card["hp"] or None,
                 stage=card["stage"] or None,
+                image_url=card.get("image_url") or None,
                 last_fetched_at=now,
             ))
 
