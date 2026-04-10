@@ -935,15 +935,22 @@ textarea.input { resize: vertical; min-height: 64px; }
   border-radius: var(--radius);
 }
 
-/* ── Set poster (landscape logo images, ~3:1 ratio) ──────────── */
+/* ── Set poster grid (wider columns, landscape cards) ─────────── */
+.sets-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+/* Set poster cards — landscape 16:9 to give logo room to breathe */
 .poster-card.set-poster {
-  aspect-ratio: 3 / 1;
+  aspect-ratio: 16 / 9;
   background: var(--bg-elevated);
 }
 
 .poster-card.set-poster img {
   object-fit: contain;
-  padding: 0.75rem 1rem 2rem; /* extra bottom room for overlay */
+  padding: 1.25rem 1.5rem 3rem; /* extra bottom padding leaves room for overlay */
 }
 
 /* Set detail card grid — individual cards keep the portrait ratio */
