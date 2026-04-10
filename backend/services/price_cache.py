@@ -21,43 +21,63 @@ def _is_stale(last_fetched_at: datetime, ttl_hours: int) -> bool:
     return datetime.now(timezone.utc) - last_fetched_at > timedelta(hours=ttl_hours)
 
 
-async def _upsert_card_metadata(session: AsyncSession, card_data: dict) -> None:
-    """Insert or update card metadata from a raw API response."""
-    api_id = card_data.get("id") or card_data.get("api_id") or card_data.get("productId")
+async def _upsert_card_metadata(session: AsyncSession, raw_card_data: dict) -> None:
+    """
+    Insert or update card metadata from a raw API response (/cards/{id} format).
+    The API nests card info under 'card_info'.
+    """
+    api_id = raw_card_data.get("id") or raw_card_data.get("api_id")
     if not api_id:
         return
 
-    existing = await session.get(Card, str(api_id))
+    info = raw_card_data.get("card_info", {})
     now = datetime.now(timezone.utc)
 
-    name = card_data.get("name", "")
-    clean_name = card_data.get("cleanName") or card_data.get("clean_name") or name
-    set_id = str(card_data.get("groupId") or card_data.get("set_id") or "")
-    set_code = card_data.get("setCode") or card_data.get("set_code") or ""
+    name = info.get("name") or raw_card_data.get("name", "")
+    clean_name = info.get("clean_name") or name
+    set_id = str(info.get("set_id") or raw_card_data.get("set_id") or "") or None
+    set_code = info.get("set_code") or raw_card_data.get("set_code") or None
+    set_name = info.get("set_name") or raw_card_data.get("set_name") or ""
 
+    # Ensure parent set row exists to satisfy FK constraint
+    if set_id:
+        from models import Set as SetModel
+        existing_set = await session.get(SetModel, set_id)
+        if not existing_set:
+            placeholder_set = SetModel(
+                set_id=set_id,
+                set_code=set_code,
+                name=set_name or set_id,
+                last_fetched_at=now,
+                card_count=0,
+            )
+            session.add(placeholder_set)
+            await session.flush()
+
+    existing = await session.get(Card, str(api_id))
     if existing:
         existing.name = name
         existing.clean_name = clean_name
-        existing.set_id = set_id or None
-        existing.set_code = set_code or None
-        existing.card_number = card_data.get("number") or card_data.get("card_number")
-        existing.rarity = card_data.get("rarity")
-        existing.card_type = card_data.get("cardType") or card_data.get("card_type")
-        existing.hp = card_data.get("hp")
-        existing.stage = card_data.get("stage")
+        existing.set_id = set_id
+        existing.set_code = set_code
+        existing.card_number = info.get("card_number") or raw_card_data.get("card_number")
+        existing.rarity = info.get("rarity") or raw_card_data.get("rarity")
+        existing.card_type = info.get("card_type") or raw_card_data.get("card_type")
+        existing.hp = info.get("hp") or raw_card_data.get("hp")
+        existing.stage = info.get("stage") or raw_card_data.get("stage")
         existing.last_fetched_at = now
     else:
         card = Card(
             api_id=str(api_id),
             name=name,
             clean_name=clean_name,
-            set_id=set_id or None,
-            set_code=set_code or None,
-            card_number=card_data.get("number") or card_data.get("card_number"),
-            rarity=card_data.get("rarity"),
-            card_type=card_data.get("cardType") or card_data.get("card_type"),
-            hp=card_data.get("hp"),
-            stage=card_data.get("stage"),
+            set_id=set_id,
+            set_code=set_code,
+            card_number=info.get("card_number") or raw_card_data.get("card_number"),
+            rarity=info.get("rarity") or raw_card_data.get("rarity"),
+            card_type=info.get("card_type") or raw_card_data.get("card_type"),
+            hp=info.get("hp") or raw_card_data.get("hp"),
+            stage=info.get("stage") or raw_card_data.get("stage"),
             last_fetched_at=now,
         )
         session.add(card)

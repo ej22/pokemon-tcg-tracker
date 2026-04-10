@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column("language", sa.String(), nullable=True),
         sa.Column("release_date", sa.String(), nullable=True),
         sa.Column("card_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("last_fetched_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("last_fetched_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -39,7 +39,7 @@ def upgrade() -> None:
         sa.Column("card_type", sa.String(), nullable=True),
         sa.Column("hp", sa.String(), nullable=True),
         sa.Column("stage", sa.String(), nullable=True),
-        sa.Column("last_fetched_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("last_fetched_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -54,7 +54,7 @@ def upgrade() -> None:
         sa.Column("purchase_currency", sa.String(), nullable=False, server_default="EUR"),
         sa.Column("date_acquired", sa.Date(), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -69,7 +69,7 @@ def upgrade() -> None:
         sa.Column("avg_price", sa.Numeric(10, 2), nullable=True),
         sa.Column("trend_price", sa.Numeric(10, 2), nullable=True),
         sa.Column("currency", sa.String(), nullable=False, server_default="EUR"),
-        sa.Column("fetched_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("fetched_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -83,7 +83,7 @@ def upgrade() -> None:
         sa.Column("avg_price", sa.Numeric(10, 2), nullable=True),
         sa.Column("trend_price", sa.Numeric(10, 2), nullable=True),
         sa.Column("currency", sa.String(), nullable=False, server_default="EUR"),
-        sa.Column("last_fetched_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("last_fetched_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     # Indexes for common queries

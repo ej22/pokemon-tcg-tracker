@@ -84,7 +84,8 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
         now = datetime.now(timezone.utc)
 
         for raw in raw_cards:
-            api_id = str(raw.get("productId") or raw.get("id") or raw.get("api_id", ""))
+            # raw_cards are already normalised by pokewallet.get_set_cards
+            api_id = raw.get("api_id", "")
             if not api_id:
                 continue
             existing = await session.get(Card, api_id)
@@ -92,14 +93,14 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
                 card = Card(
                     api_id=api_id,
                     name=raw.get("name", ""),
-                    clean_name=raw.get("cleanName") or raw.get("clean_name") or raw.get("name", ""),
+                    clean_name=raw.get("clean_name") or raw.get("name", ""),
                     set_id=set_id,
                     set_code=set_code,
-                    card_number=raw.get("number") or raw.get("card_number"),
-                    rarity=raw.get("rarity"),
-                    card_type=raw.get("cardType") or raw.get("card_type"),
-                    hp=raw.get("hp"),
-                    stage=raw.get("stage"),
+                    card_number=raw.get("card_number") or None,
+                    rarity=raw.get("rarity") or None,
+                    card_type=raw.get("card_type") or None,
+                    hp=raw.get("hp") or None,
+                    stage=raw.get("stage") or None,
                     last_fetched_at=now,
                 )
                 session.add(card)

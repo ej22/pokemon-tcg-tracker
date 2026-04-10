@@ -58,16 +58,16 @@ async def add_to_collection(
     body: CollectionEntryCreate,
     session: AsyncSession = Depends(get_db),
 ):
-    # Ensure card exists in our DB (fetch from API if needed)
+    # Ensure card exists in our DB (fetch from API if not already cached)
     card = await session.get(Card, body.card_api_id)
     if not card:
         from services import pokewallet
         from services.price_cache import _upsert_card_metadata
 
-        card_data = await pokewallet.get_card(body.card_api_id)
-        if not card_data:
+        raw_data = await pokewallet.get_card(body.card_api_id)
+        if not raw_data:
             raise HTTPException(status_code=404, detail="Card not found in PokéWallet API")
-        await _upsert_card_metadata(session, card_data)
+        await _upsert_card_metadata(session, raw_data)
         await session.commit()
 
     entry = CollectionEntry(

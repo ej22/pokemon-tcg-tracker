@@ -51,7 +51,7 @@ def get_calls_today() -> int:
 
 
 async def search_cards(query: str, limit: int = 20) -> list[dict[str, Any]]:
-    """Search for cards by name. Returns raw API results."""
+    """Search for cards. Returns a normalised list of card dicts."""
     if is_hourly_limit_reached():
         logger.warning("Hourly API limit reached, skipping search for: %s", query)
         return []
@@ -65,10 +65,9 @@ async def search_cards(query: str, limit: int = 20) -> list[dict[str, Any]]:
         resp.raise_for_status()
         _track_call()
         data = resp.json()
-        # API may return a list or {"results": [...]}
-        if isinstance(data, list):
-            return data
-        return data.get("results", data.get("cards", []))
+
+    raw_results = data.get("results", []) if isinstance(data, dict) else data
+    return [_normalise_card(r) for r in raw_results]
 
 
 async def get_card(card_id: str) -> dict[str, Any] | None:
@@ -86,7 +85,7 @@ async def get_card(card_id: str) -> dict[str, Any] | None:
             return None
         resp.raise_for_status()
         _track_call()
-        return resp.json()
+        return resp.json()  # Return raw; callers use extract_* helpers
 
 
 async def get_sets() -> list[dict[str, Any]]:
@@ -106,7 +105,7 @@ async def get_sets() -> list[dict[str, Any]]:
 
 
 async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
-    """Fetch all cards in a set."""
+    """Fetch all cards in a set (normalised)."""
     if is_hourly_limit_reached():
         logger.warning("Hourly API limit reached, skipping set cards fetch: %s", set_code)
         return []
@@ -121,61 +120,63 @@ async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
         resp.raise_for_status()
         _track_call()
         data = resp.json()
-        # Handle disambiguation response
-        if isinstance(data, dict) and "sets" in data:
-            logger.info("Disambiguation response for set %s — multiple matches", set_code)
-            return []
-        if isinstance(data, list):
-            return data
-        return data.get("cards", data.get("results", []))
+
+    if isinstance(data, dict) and "sets" in data:
+        logger.info("Disambiguation response for set %s — multiple matches", set_code)
+        return []
+
+    raw_list = data if isinstance(data, list) else data.get("cards", data.get("results", []))
+    return [_normalise_card(r) for r in raw_list]
+
+
+def _normalise_card(raw: dict[str, Any]) -> dict[str, Any]:
+    """
+    Flatten the nested card_info structure into a top-level dict.
+    Handles both search results and set-card lists.
+    """
+    info = raw.get("card_info", {})
+    return {
+        "api_id":      raw.get("id") or raw.get("api_id", ""),
+        "name":        info.get("name") or raw.get("name", ""),
+        "clean_name":  info.get("clean_name") or raw.get("clean_name", ""),
+        "set_id":      info.get("set_id") or raw.get("set_id"),
+        "set_name":    info.get("set_name") or raw.get("set_name", ""),
+        "set_code":    info.get("set_code") or raw.get("set_code", ""),
+        "card_number": info.get("card_number") or raw.get("card_number", ""),
+        "rarity":      info.get("rarity") or raw.get("rarity", ""),
+        "card_type":   info.get("card_type") or raw.get("card_type", ""),
+        "hp":          info.get("hp") or raw.get("hp", ""),
+        "stage":       info.get("stage") or raw.get("stage", ""),
+        "image_url":   info.get("image_url") or raw.get("image_url", ""),
+        # Keep originals for price extraction
+        "_raw": raw,
+    }
 
 
 def extract_cardmarket_prices(card_data: dict[str, Any]) -> list[dict[str, Any]]:
     """
-    Extract CardMarket EUR price entries from a raw card API response.
-    Returns a list of dicts: {variant_type, low, mid, avg, trend, currency}.
+    Extract CardMarket EUR price entries from a raw /cards/{id} API response.
+    Returns a list of price dicts ready to store.
     """
-    prices = []
-    raw_prices = card_data.get("prices", {})
+    cm = card_data.get("cardmarket", {})
+    if not cm:
+        return []
 
-    if not raw_prices:
-        return prices
+    price_list = cm.get("prices", [])
+    if not isinstance(price_list, list):
+        return []
 
-    # PokéWallet price structure varies; handle both flat and nested formats
-    # Nested: {"cardmarket": {"Normal": {"low": ..., "trend": ...}, ...}}
-    # Flat:   {"cardmarket_low": ..., "cardmarket_trend": ...}
-
-    cm = raw_prices.get("cardmarket", {})
-    if isinstance(cm, dict):
-        for variant, pricing in cm.items():
-            if isinstance(pricing, dict):
-                prices.append({
-                    "variant_type": variant,
-                    "low_price": pricing.get("low"),
-                    "mid_price": pricing.get("mid"),
-                    "market_price": pricing.get("market"),
-                    "avg_price": pricing.get("avg") or pricing.get("average"),
-                    "trend_price": pricing.get("trend"),
-                    "currency": "EUR",
-                    "source": "cardmarket",
-                })
-        if prices:
-            return prices
-
-    # Flat fallback — single variant
-    flat_trend = raw_prices.get("cardmarket_trend") or raw_prices.get("cm_trend")
-    flat_avg = raw_prices.get("cardmarket_avg") or raw_prices.get("cm_avg")
-    flat_low = raw_prices.get("cardmarket_low") or raw_prices.get("cm_low")
-    if any([flat_trend, flat_avg, flat_low]):
-        prices.append({
-            "variant_type": "Normal",
-            "low_price": flat_low,
-            "mid_price": None,
-            "market_price": None,
-            "avg_price": flat_avg,
-            "trend_price": flat_trend,
-            "currency": "EUR",
-            "source": "cardmarket",
+    results = []
+    for p in price_list:
+        variant = p.get("variant_type") or "Normal"
+        results.append({
+            "variant_type":  variant,
+            "source":        "cardmarket",
+            "low_price":     p.get("low"),
+            "mid_price":     None,
+            "market_price":  None,
+            "avg_price":     p.get("avg"),
+            "trend_price":   p.get("trend"),
+            "currency":      "EUR",
         })
-
-    return prices
+    return results

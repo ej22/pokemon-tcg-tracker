@@ -2,7 +2,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import (
     String, Integer, Numeric, Text, DateTime, Date,
-    ForeignKey, func, UniqueConstraint
+    ForeignKey, func
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
@@ -17,7 +17,7 @@ class Set(Base):
     language: Mapped[str | None] = mapped_column(String, nullable=True)
     release_date: Mapped[str | None] = mapped_column(String, nullable=True)
     card_count: Mapped[int] = mapped_column(Integer, default=0)
-    last_fetched_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    last_fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     cards: Mapped[list["Card"]] = relationship("Card", back_populates="set")
 
@@ -35,7 +35,7 @@ class Card(Base):
     card_type: Mapped[str | None] = mapped_column(String, nullable=True)
     hp: Mapped[str | None] = mapped_column(String, nullable=True)
     stage: Mapped[str | None] = mapped_column(String, nullable=True)
-    last_fetched_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    last_fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     set: Mapped["Set | None"] = relationship("Set", back_populates="cards")
     collection_entries: Mapped[list["CollectionEntry"]] = relationship(
@@ -62,7 +62,7 @@ class CollectionEntry(Base):
     purchase_currency: Mapped[str] = mapped_column(String, default="EUR")
     date_acquired: Mapped[date | None] = mapped_column(Date, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     card: Mapped["Card"] = relationship("Card", back_populates="collection_entries")
 
@@ -80,7 +80,7 @@ class PriceHistory(Base):
     avg_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     trend_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String, default="EUR")
-    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     card: Mapped["Card"] = relationship("Card", back_populates="price_history")
 
@@ -99,6 +99,6 @@ class PriceCache(Base):
     avg_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     trend_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String, default="EUR")
-    last_fetched_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    last_fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     card: Mapped["Card"] = relationship("Card", back_populates="price_cache")
