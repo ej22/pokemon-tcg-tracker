@@ -35,6 +35,7 @@ class Card(Base):
     card_type: Mapped[str | None] = mapped_column(String, nullable=True)
     hp: Mapped[str | None] = mapped_column(String, nullable=True)
     stage: Mapped[str | None] = mapped_column(String, nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     set: Mapped["Set | None"] = relationship("Set", back_populates="cards")

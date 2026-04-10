@@ -102,6 +102,7 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
                     card_type=raw.get("card_type") or None,
                     hp=raw.get("hp") or None,
                     stage=raw.get("stage") or None,
+                    image_url=raw.get("image_url") or None,
                     last_fetched_at=now,
                 )
                 session.add(card)

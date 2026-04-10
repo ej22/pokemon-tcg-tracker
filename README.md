@@ -53,22 +53,35 @@ open http://localhost:3003
 
 ## API Endpoints
 
-| Method | Path                          | Description                                   |
-|--------|-------------------------------|-----------------------------------------------|
-| GET    | `/api/collection`             | List all collection entries with prices       |
-| POST   | `/api/collection`             | Add a card to the collection                  |
-| PUT    | `/api/collection/{id}`        | Update a collection entry                     |
-| DELETE | `/api/collection/{id}`        | Remove a card from the collection             |
-| GET    | `/api/search?q={query}`       | Search for cards via PokéWallet               |
-| GET    | `/api/sets`                   | List all cached sets                          |
-| GET    | `/api/sets/{set_id}/cards`    | List cards in a set                           |
-| GET    | `/api/prices/{card_api_id}`   | Get latest cached prices for a card           |
-| GET    | `/api/prices/{card_api_id}/history` | Full price history for a card           |
-| POST   | `/api/prices/refresh`         | Force-refresh prices for all collection cards |
-| GET    | `/api/portfolio/summary`      | Portfolio value summary                       |
-| GET    | `/api/health`                 | Health check                                  |
+| Method | Path                                | Description                                   |
+|--------|-------------------------------------|-----------------------------------------------|
+| GET    | `/api/collection`                   | List all collection entries with prices       |
+| POST   | `/api/collection`                   | Add a card to the collection                  |
+| PUT    | `/api/collection/{id}`              | Update a collection entry                     |
+| DELETE | `/api/collection/{id}`              | Remove a card from the collection             |
+| GET    | `/api/search?q={query}`             | Search for cards via PokéWallet               |
+| GET    | `/api/sets`                         | List all cached sets                          |
+| GET    | `/api/sets/{set_id}/cards`          | List cards in a set                           |
+| GET    | `/api/prices/{card_api_id}`         | Get latest cached prices for a card           |
+| GET    | `/api/prices/{card_api_id}/history` | Full price history for a card                 |
+| POST   | `/api/prices/refresh`               | Force-refresh prices for all collection cards |
+| GET    | `/api/portfolio/summary`            | Portfolio value summary                       |
+| GET    | `/api/images/{card_api_id}`         | Proxy card artwork from PokéWallet (browser-cacheable) |
+| GET    | `/api/health`                       | Health check                                  |
 
 Full interactive docs: `http://localhost:8014/docs`
+
+## UI
+
+The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no build step.
+
+**Collection view** — Netflix-style poster grid. Each card displays its artwork (fetched via the image proxy), condition chip, quantity badge, and price in a bottom gradient overlay. Hover reveals edit and delete action buttons. Clicking the card body opens the edit modal.
+
+**Portfolio view** — KPI summary cards (estimated value, card count, priced count) and a Chart.js line chart showing portfolio value over time, plus a value-by-set breakdown table.
+
+**Sets view** — Searchable grid of all 700+ Pokémon TCG sets. Clicking a set loads its cards as a poster grid with the same artwork display; hover reveals an Add to Collection button for each card.
+
+**Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}`. The backend fetches the image from PokéWallet using the server-side API key and returns it with `Cache-Control: public, max-age=86400` so browsers cache each image for 24 hours — subsequent page loads make no API calls for images.
 
 ## How the Price Cache Works
 
