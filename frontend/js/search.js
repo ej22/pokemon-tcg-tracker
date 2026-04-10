@@ -1,17 +1,17 @@
 /* ── Search modal + add-to-collection ─────────────────────────── */
 
-const modalOverlay   = document.getElementById('modal-overlay');
-const modalClose     = document.getElementById('modal-close');
-const stepSearch     = document.getElementById('modal-step-search');
-const stepForm       = document.getElementById('modal-step-form');
-const searchInput    = document.getElementById('search-input');
-const btnSearch      = document.getElementById('btn-search');
-const searchLoading  = document.getElementById('search-loading');
-const searchResults  = document.getElementById('search-results');
-const selectedInfo   = document.getElementById('selected-card-info');
-const addCardForm    = document.getElementById('add-card-form');
-const variantSelect  = document.getElementById('variant-select');
-const btnBackSearch  = document.getElementById('btn-back-search');
+const modalOverlay  = document.getElementById('modal-overlay');
+const modalClose    = document.getElementById('modal-close');
+const stepSearch    = document.getElementById('modal-step-search');
+const stepForm      = document.getElementById('modal-step-form');
+const searchInput   = document.getElementById('search-input');
+const btnSearch     = document.getElementById('btn-search');
+const searchLoading = document.getElementById('search-loading');
+const searchResults = document.getElementById('search-results');
+const selectedInfo  = document.getElementById('selected-card-info');
+const addCardForm   = document.getElementById('add-card-form');
+const variantSelect = document.getElementById('add-variant');
+const btnBackSearch = document.getElementById('btn-back-search');
 
 let selectedCard = null;
 
@@ -51,7 +51,7 @@ async function runSearch() {
     const results = await apiFetch(`/search?q=${encodeURIComponent(q)}`);
     renderSearchResults(results);
   } catch (err) {
-    searchResults.innerHTML = `<p class="text-muted">Error: ${err.message}</p>`;
+    searchResults.innerHTML = `<p class="text-muted" style="padding:0.75rem 0">Error: ${err.message}</p>`;
   } finally {
     searchLoading.classList.add('hidden');
   }
@@ -62,7 +62,7 @@ searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(
 
 function renderSearchResults(results) {
   if (!results.length) {
-    searchResults.innerHTML = '<p class="text-muted">No results found.</p>';
+    searchResults.innerHTML = '<p class="text-muted" style="padding:0.75rem 0">No results found.</p>';
     return;
   }
 
@@ -77,7 +77,6 @@ function renderSearchResults(results) {
     </div>
   `).join('');
 
-  // Store result data for lookup
   searchResults._results = results;
 
   searchResults.querySelectorAll('.search-result-item').forEach(el => {
@@ -88,20 +87,19 @@ function renderSearchResults(results) {
   });
 }
 
-// ── Pick card → show add form ─────────────────────────────────────
+// ── Pick card → show add form ────────────────────────────────────
 async function pickCard(card) {
   selectedCard = card;
 
-  selectedInfo.innerHTML = `
-    <strong>${card.name}</strong><br/>
-    <span class="text-muted">
-      ${card.set_name || ''}${card.set_code ? ` (${card.set_code})` : ''}
-      ${card.card_number ? ` · #${card.card_number}` : ''}
-      ${card.rarity ? ` · ${card.rarity}` : ''}
-    </span>
-  `;
+  selectedInfo.querySelector('.selected-card-name').textContent = card.name;
+  selectedInfo.querySelector('.selected-card-meta').textContent = [
+    card.set_name || '',
+    card.set_code ? `(${card.set_code})` : '',
+    card.card_number ? `#${card.card_number}` : '',
+    card.rarity || '',
+  ].filter(Boolean).join(' · ');
 
-  // Populate variant dropdown from price data
+  // Populate variant dropdown from price API
   variantSelect.innerHTML = '<option value="">— select —</option>';
   try {
     const prices = await apiFetch(`/prices/${card.api_id}`);
@@ -114,10 +112,10 @@ async function pickCard(card) {
     });
     if (variants.length === 1) variantSelect.value = variants[0];
   } catch (_) {
-    // No prices yet — keep default options
-    ['Normal', 'Holofoil', 'Reverse Holofoil'].forEach(v => {
+    ['normal', 'holo', 'Holofoil', 'Reverse Holofoil'].forEach(v => {
       const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v;
+      opt.value = v;
+      opt.textContent = v;
       variantSelect.appendChild(opt);
     });
   }
@@ -126,22 +124,22 @@ async function pickCard(card) {
   stepForm.classList.remove('hidden');
 }
 
-// ── Submit add form ───────────────────────────────────────────────
+// ── Submit add form ──────────────────────────────────────────────
 addCardForm.addEventListener('submit', async e => {
   e.preventDefault();
   if (!selectedCard) return;
 
   const f = addCardForm.elements;
   const body = {
-    card_api_id:      selectedCard.api_id,
-    quantity:         parseInt(f.quantity.value, 10),
-    condition:        f.condition.value,
-    language:         f.language.value,
-    variant:          f.variant.value || null,
-    purchase_price:   f.purchase_price.value ? parseFloat(f.purchase_price.value) : null,
-    purchase_currency:'EUR',
-    date_acquired:    f.date_acquired.value || null,
-    notes:            f.notes.value || null,
+    card_api_id:       selectedCard.api_id,
+    quantity:          parseInt(f.quantity.value, 10),
+    condition:         f.condition.value,
+    language:          f.language.value,
+    variant:           f.variant.value || null,
+    purchase_price:    f.purchase_price.value ? parseFloat(f.purchase_price.value) : null,
+    purchase_currency: 'EUR',
+    date_acquired:     f.date_acquired.value || null,
+    notes:             f.notes.value || null,
   };
 
   try {

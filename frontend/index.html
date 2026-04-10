@@ -8,258 +8,406 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <span class="navbar-brand">&#9670; PokéTCG Tracker</span>
-    <div class="nav-links">
-      <a href="#collection" class="nav-link active" data-view="collection">Collection</a>
-      <a href="#portfolio"  class="nav-link"        data-view="portfolio">Portfolio</a>
-      <a href="#sets"       class="nav-link"        data-view="sets">Sets</a>
+
+<div class="app-layout">
+
+  <!-- ── Sidebar (desktop) ──────────────────────────────────── -->
+  <aside class="sidebar" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">P</div>
+      <div>
+        <div class="sidebar-logo-text">PokéTCG</div>
+        <div class="sidebar-logo-sub">Collection Tracker</div>
+      </div>
     </div>
-  </nav>
 
-  <main class="container">
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Views</span>
 
-    <!-- ── Collection View ─────────────────────────────────────── -->
-    <section id="view-collection" class="view active">
-      <div class="view-header">
-        <h1>My Collection</h1>
-        <button class="btn btn-primary" id="btn-add-card">+ Add Card</button>
+      <a href="#collection" class="nav-link active" data-view="collection">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" /></svg>
+        <span>Collection</span>
+      </a>
+
+      <a href="#portfolio" class="nav-link" data-view="portfolio">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+        <span>Portfolio</span>
+      </a>
+
+      <a href="#sets" class="nav-link" data-view="sets">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 3.75 9v11.25A2.25 2.25 0 0 0 6 22.5h12a2.25 2.25 0 0 0 2.25-2.25V9A2.25 2.25 0 0 0 17.25 6.75m-12 0h12" /></svg>
+        <span>Sets</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Total cards</span>
+        <span class="sidebar-stat-value" id="sidebar-total-cards">—</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Est. value</span>
+        <span class="sidebar-stat-value accent" id="sidebar-value">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Top bar (mobile) ────────────────────────────────────── -->
+  <header class="topbar" role="banner">
+    <span class="topbar-brand">PokéTCG</span>
+    <nav class="topbar-nav" aria-label="Main navigation">
+      <a href="#collection" class="nav-link active" data-view="collection">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" /></svg>
+        <span>Collection</span>
+      </a>
+      <a href="#portfolio" class="nav-link" data-view="portfolio">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+        <span>Portfolio</span>
+      </a>
+      <a href="#sets" class="nav-link" data-view="sets">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 3.75 9v11.25A2.25 2.25 0 0 0 6 22.5h12a2.25 2.25 0 0 0 2.25-2.25V9A2.25 2.25 0 0 0 17.25 6.75m-12 0h12" /></svg>
+        <span>Sets</span>
+      </a>
+    </nav>
+  </header>
+
+  <!-- ── Main ────────────────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- ── Collection ──────────────────────────────────────── -->
+    <section id="view-collection" class="view active" aria-label="Collection">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">My Collection</h1>
+          <p class="page-subtitle" id="collection-subtitle">Loading cards…</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="btn-add-card">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Add Card
+          </button>
+        </div>
       </div>
 
-      <div id="collection-loading" class="loading-msg">Loading collection…</div>
-      <div id="collection-empty"   class="empty-msg hidden">No cards yet — click <strong>+ Add Card</strong> to get started.</div>
-
-      <div class="table-wrap">
-        <table id="collection-table" class="data-table hidden">
-          <thead>
-            <tr>
-              <th>Card</th>
-              <th>Set</th>
-              <th>#</th>
-              <th>Lang</th>
-              <th>Variant</th>
-              <th>Cond</th>
-              <th>Qty</th>
-              <th>Bought (EUR)</th>
-              <th>Price EUR</th>
-              <th>P&amp;L</th>
-              <th>Updated</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="collection-tbody"></tbody>
-        </table>
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="data-table" id="collection-table" aria-label="Card collection">
+            <thead>
+              <tr>
+                <th>Card</th>
+                <th>Set</th>
+                <th>#</th>
+                <th>Language</th>
+                <th>Variant</th>
+                <th>Cond.</th>
+                <th>Qty</th>
+                <th>Bought</th>
+                <th>Price (EUR)</th>
+                <th>P&amp;L</th>
+                <th>Updated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="collection-tbody">
+              <!-- skeleton rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div id="collection-empty" class="empty-state hidden">
+          <div class="empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" /></svg>
+          </div>
+          <p class="empty-title">No cards yet</p>
+          <p class="empty-desc">Add your first card to start tracking your collection and portfolio value.</p>
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Add your first card
+          </button>
+        </div>
       </div>
     </section>
 
-    <!-- ── Portfolio View ──────────────────────────────────────── -->
-    <section id="view-portfolio" class="view hidden">
-      <div class="view-header">
-        <h1>Portfolio</h1>
-        <button class="btn btn-secondary" id="btn-refresh-prices">&#8635; Refresh Prices</button>
+    <!-- ── Portfolio ───────────────────────────────────────── -->
+    <section id="view-portfolio" class="view hidden" aria-label="Portfolio">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Portfolio</h1>
+          <p class="page-subtitle">Your collection's estimated market value</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" id="btn-refresh-prices">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+            Refresh prices
+          </button>
+        </div>
       </div>
 
-      <div id="portfolio-loading" class="loading-msg">Loading portfolio…</div>
+      <div id="portfolio-loading" class="kpi-grid">
+        <div class="kpi-card"><div class="skeleton skeleton-cell" style="width:60%;height:12px;margin-bottom:10px"></div><div class="skeleton skeleton-cell" style="width:40%;height:28px"></div></div>
+        <div class="kpi-card"><div class="skeleton skeleton-cell" style="width:60%;height:12px;margin-bottom:10px"></div><div class="skeleton skeleton-cell" style="width:40%;height:28px"></div></div>
+        <div class="kpi-card"><div class="skeleton skeleton-cell" style="width:60%;height:12px;margin-bottom:10px"></div><div class="skeleton skeleton-cell" style="width:40%;height:28px"></div></div>
+        <div class="kpi-card"><div class="skeleton skeleton-cell" style="width:60%;height:12px;margin-bottom:10px"></div><div class="skeleton skeleton-cell" style="width:40%;height:28px"></div></div>
+      </div>
 
       <div id="portfolio-content" class="hidden">
-        <div class="summary-cards">
-          <div class="summary-card">
-            <div class="summary-value" id="summary-total-cards">—</div>
-            <div class="summary-label">Total Cards</div>
+        <div class="kpi-grid">
+          <div class="kpi-card accent">
+            <div class="kpi-label">Est. Value</div>
+            <div class="kpi-value" id="summary-value-eur">—</div>
+            <div class="kpi-sub">CardMarket EUR</div>
           </div>
-          <div class="summary-card">
-            <div class="summary-value" id="summary-unique-cards">—</div>
-            <div class="summary-label">Unique Cards</div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Cards</div>
+            <div class="kpi-value" id="summary-total-cards">—</div>
+            <div class="kpi-sub">across all entries</div>
           </div>
-          <div class="summary-card accent">
-            <div class="summary-value" id="summary-value-eur">—</div>
-            <div class="summary-label">Est. Value (EUR)</div>
+          <div class="kpi-card">
+            <div class="kpi-label">Unique Cards</div>
+            <div class="kpi-value" id="summary-unique-cards">—</div>
+            <div class="kpi-sub">distinct card IDs</div>
           </div>
-          <div class="summary-card">
-            <div class="summary-value" id="summary-priced">—</div>
-            <div class="summary-label">Cards Priced</div>
+          <div class="kpi-card green">
+            <div class="kpi-label">Priced</div>
+            <div class="kpi-value" id="summary-priced">—</div>
+            <div class="kpi-sub">cards with live prices</div>
           </div>
         </div>
 
-        <div class="chart-section">
-          <h2>Portfolio Value Over Time</h2>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-card-title">Portfolio Value Over Time</span>
+          </div>
           <div class="chart-wrap">
             <canvas id="portfolio-chart"></canvas>
           </div>
-          <p id="chart-no-data" class="empty-msg hidden">Not enough price history to show a chart yet.</p>
+          <p id="chart-no-data" class="hidden" style="text-align:center;padding:2rem 0;font-size:0.825rem;color:var(--text-subtle)">Not enough price history yet — come back after the nightly refresh runs.</p>
         </div>
 
-        <h2>Value by Set</h2>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr><th>Set</th><th>Cards</th><th>Value (EUR)</th></tr>
-            </thead>
+        <p class="section-title">Value by Set</p>
+        <div class="table-container">
+          <table class="data-table" style="min-width:400px" aria-label="Value by set">
+            <thead><tr><th>Set</th><th>Cards</th><th>Value (EUR)</th></tr></thead>
             <tbody id="set-value-tbody"></tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- ── Sets View ───────────────────────────────────────────── -->
-    <section id="view-sets" class="view hidden">
-      <div class="view-header">
-        <h1>Sets</h1>
+    <!-- ── Sets ────────────────────────────────────────────── -->
+    <section id="view-sets" class="view hidden" aria-label="Sets browser">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Sets</h1>
+          <p class="page-subtitle" id="sets-subtitle">Browse all Pokémon TCG sets</p>
+        </div>
       </div>
 
-      <div id="sets-loading" class="loading-msg">Loading sets…</div>
-      <div id="sets-empty" class="empty-msg hidden">No sets cached yet.</div>
+      <div id="sets-loading" class="sets-grid">
+        <div class="set-card"><div class="skeleton skeleton-cell" style="height:14px;width:70%;margin-bottom:8px"></div><div class="skeleton skeleton-cell" style="height:11px;width:50%"></div></div>
+        <div class="set-card"><div class="skeleton skeleton-cell" style="height:14px;width:80%;margin-bottom:8px"></div><div class="skeleton skeleton-cell" style="height:11px;width:40%"></div></div>
+        <div class="set-card"><div class="skeleton skeleton-cell" style="height:14px;width:60%;margin-bottom:8px"></div><div class="skeleton skeleton-cell" style="height:11px;width:55%"></div></div>
+        <div class="set-card"><div class="skeleton skeleton-cell" style="height:14px;width:75%;margin-bottom:8px"></div><div class="skeleton skeleton-cell" style="height:11px;width:45%"></div></div>
+        <div class="set-card"><div class="skeleton skeleton-cell" style="height:14px;width:65%;margin-bottom:8px"></div><div class="skeleton skeleton-cell" style="height:11px;width:50%"></div></div>
+        <div class="set-card"><div class="skeleton skeleton-cell" style="height:14px;width:80%;margin-bottom:8px"></div><div class="skeleton skeleton-cell" style="height:11px;width:35%"></div></div>
+      </div>
 
       <div id="sets-grid" class="sets-grid hidden"></div>
 
-      <!-- Set detail panel -->
+      <div id="sets-empty" class="empty-state hidden">
+        <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 3.75 9v11.25A2.25 2.25 0 0 0 6 22.5h12a2.25 2.25 0 0 0 2.25-2.25V9A2.25 2.25 0 0 0 17.25 6.75m-12 0h12" /></svg></div>
+        <p class="empty-title">No sets loaded</p>
+        <p class="empty-desc">Try refreshing the page — sets are fetched from PokéWallet on first visit.</p>
+      </div>
+
       <div id="set-detail" class="hidden">
-        <button class="btn btn-secondary" id="btn-back-sets">&#8592; Back to Sets</button>
-        <h2 id="set-detail-title"></h2>
-        <div id="set-cards-loading" class="loading-msg hidden">Loading cards…</div>
-        <div class="table-wrap">
-          <table class="data-table" id="set-cards-table">
-            <thead>
-              <tr><th>#</th><th>Name</th><th>Rarity</th><th>Type</th><th>HP</th><th>Action</th></tr>
-            </thead>
-            <tbody id="set-cards-tbody"></tbody>
-          </table>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" id="btn-back-sets">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
+            All Sets
+          </button>
+          <h2 id="set-detail-title" style="font-size:1rem;font-weight:700"></h2>
+        </div>
+
+        <div id="set-cards-loading" class="hidden" style="padding:2rem;text-align:center;color:var(--text-subtle);font-size:0.825rem">Loading cards…</div>
+
+        <div class="table-container">
+          <div class="table-scroll">
+            <table class="data-table" id="set-cards-table" aria-label="Set cards" style="min-width:500px">
+              <thead><tr><th>#</th><th>Name</th><th>Rarity</th><th>Type</th><th>HP</th><th></th></tr></thead>
+              <tbody id="set-cards-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
 
   </main>
+</div>
 
-  <!-- ── Search / Add Card Modal ─────────────────────────────── -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Add Card to Collection</h2>
-        <button class="modal-close" id="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-
-        <!-- Step 1: Search -->
-        <div id="modal-step-search">
-          <div class="input-group">
-            <input type="text" id="search-input" class="input" placeholder="Search by card name…" autocomplete="off" />
-            <button class="btn btn-primary" id="btn-search">Search</button>
-          </div>
-          <div id="search-loading" class="loading-msg hidden">Searching…</div>
-          <div id="search-results" class="search-results"></div>
-        </div>
-
-        <!-- Step 2: Add form (shown after picking a card) -->
-        <div id="modal-step-form" class="hidden">
-          <div class="selected-card-info" id="selected-card-info"></div>
-
-          <form id="add-card-form" class="add-form">
-            <div class="form-row">
-              <label>Quantity
-                <input type="number" name="quantity" value="1" min="1" class="input" />
-              </label>
-              <label>Condition
-                <select name="condition" class="input">
-                  <option value="NM">NM</option>
-                  <option value="LP">LP</option>
-                  <option value="MP">MP</option>
-                  <option value="HP">HP</option>
-                  <option value="DMG">DMG</option>
-                </select>
-              </label>
-              <label>Language
-                <input type="text" name="language" value="English" class="input" />
-              </label>
-            </div>
-            <div class="form-row">
-              <label>Variant
-                <select name="variant" id="variant-select" class="input">
-                  <option value="">— select —</option>
-                  <option value="Normal">Normal</option>
-                  <option value="Holofoil">Holofoil</option>
-                  <option value="Reverse Holofoil">Reverse Holofoil</option>
-                </select>
-              </label>
-              <label>Purchase Price (EUR)
-                <input type="number" name="purchase_price" step="0.01" min="0" placeholder="0.00" class="input" />
-              </label>
-              <label>Date Acquired
-                <input type="date" name="date_acquired" class="input" />
-              </label>
-            </div>
-            <div class="form-row">
-              <label class="full-width">Notes
-                <textarea name="notes" class="input" rows="2" placeholder="Optional notes…"></textarea>
-              </label>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="btn-back-search">&#8592; Back</button>
-              <button type="submit" class="btn btn-primary">Add to Collection</button>
-            </div>
-          </form>
-        </div>
-
-      </div>
+<!-- ── Add Card Modal ──────────────────────────────────────────── -->
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Add card to collection">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Add Card</span>
+      <button class="modal-close" id="modal-close" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
     </div>
-  </div>
+    <div class="modal-body">
 
-  <!-- ── Edit Modal ──────────────────────────────────────────── -->
-  <div id="edit-modal-overlay" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Edit Entry</h2>
-        <button class="modal-close" id="edit-modal-close">&times;</button>
+      <!-- Step 1: Search -->
+      <div id="modal-step-search">
+        <div class="input-group">
+          <input type="text" id="search-input" class="input" placeholder="Search by card name…" autocomplete="off" aria-label="Search cards" />
+          <button class="btn btn-primary" id="btn-search">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            Search
+          </button>
+        </div>
+        <div id="search-loading" class="hidden" style="padding:1rem 0;text-align:center;font-size:0.825rem;color:var(--text-subtle)">Searching PokéWallet…</div>
+        <div id="search-results" class="search-results"></div>
       </div>
-      <div class="modal-body">
-        <form id="edit-card-form" class="add-form">
-          <input type="hidden" name="entry_id" />
-          <div class="form-row">
-            <label>Quantity
-              <input type="number" name="quantity" min="1" class="input" />
-            </label>
-            <label>Condition
-              <select name="condition" class="input">
-                <option value="NM">NM</option>
-                <option value="LP">LP</option>
-                <option value="MP">MP</option>
-                <option value="HP">HP</option>
-                <option value="DMG">DMG</option>
+
+      <!-- Step 2: Add form -->
+      <div id="modal-step-form" class="hidden">
+        <div class="selected-card-banner">
+          <div class="selected-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+          </div>
+          <div id="selected-card-info">
+            <div class="selected-card-name"></div>
+            <div class="selected-card-meta"></div>
+          </div>
+        </div>
+
+        <form id="add-card-form">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label" for="add-quantity">Quantity</label>
+              <input type="number" id="add-quantity" name="quantity" value="1" min="1" class="input" />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="add-condition">Condition</label>
+              <select id="add-condition" name="condition" class="input">
+                <option value="NM">NM — Near Mint</option>
+                <option value="LP">LP — Lightly Played</option>
+                <option value="MP">MP — Moderately Played</option>
+                <option value="HP">HP — Heavily Played</option>
+                <option value="DMG">DMG — Damaged</option>
               </select>
-            </label>
-            <label>Language
-              <input type="text" name="language" class="input" />
-            </label>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="add-language">Language</label>
+              <input type="text" id="add-language" name="language" value="English" class="input" />
+            </div>
           </div>
-          <div class="form-row">
-            <label>Variant
-              <input type="text" name="variant" class="input" />
-            </label>
-            <label>Purchase Price (EUR)
-              <input type="number" name="purchase_price" step="0.01" min="0" class="input" />
-            </label>
-            <label>Date Acquired
-              <input type="date" name="date_acquired" class="input" />
-            </label>
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label" for="add-variant">Variant</label>
+              <select id="add-variant" name="variant" class="input">
+                <option value="">— select —</option>
+                <option value="normal">Normal</option>
+                <option value="holo">Holo</option>
+                <option value="Holofoil">Holofoil</option>
+                <option value="Reverse Holofoil">Reverse Holofoil</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="add-price">Purchase Price (EUR)</label>
+              <input type="number" id="add-price" name="purchase_price" step="0.01" min="0" placeholder="0.00" class="input" />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="add-date">Date Acquired</label>
+              <input type="date" id="add-date" name="date_acquired" class="input" />
+            </div>
           </div>
-          <div class="form-row">
-            <label class="full-width">Notes
-              <textarea name="notes" class="input" rows="2"></textarea>
-            </label>
+          <div class="form-grid cols-1" style="margin-bottom:0">
+            <div class="form-field">
+              <label class="form-label" for="add-notes">Notes</label>
+              <textarea id="add-notes" name="notes" class="input" rows="2" placeholder="Optional notes…"></textarea>
+            </div>
           </div>
           <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <button type="button" class="btn btn-ghost" id="btn-back-search">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
+              Back
+            </button>
+            <button type="submit" class="btn btn-primary">Add to Collection</button>
           </div>
         </form>
       </div>
+
     </div>
   </div>
+</div>
 
-  <div id="toast" class="toast hidden"></div>
+<!-- ── Edit Modal ──────────────────────────────────────────────── -->
+<div id="edit-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Edit collection entry">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Edit Entry</span>
+      <button class="modal-close" id="edit-modal-close" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form id="edit-card-form">
+        <input type="hidden" name="entry_id" />
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label" for="edit-quantity">Quantity</label>
+            <input type="number" id="edit-quantity" name="quantity" min="1" class="input" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="edit-condition">Condition</label>
+            <select id="edit-condition" name="condition" class="input">
+              <option value="NM">NM</option>
+              <option value="LP">LP</option>
+              <option value="MP">MP</option>
+              <option value="HP">HP</option>
+              <option value="DMG">DMG</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="edit-language">Language</label>
+            <input type="text" id="edit-language" name="language" class="input" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label" for="edit-variant">Variant</label>
+            <input type="text" id="edit-variant" name="variant" class="input" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="edit-purchase-price">Purchase Price (EUR)</label>
+            <input type="number" id="edit-purchase-price" name="purchase_price" step="0.01" min="0" class="input" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="edit-date">Date Acquired</label>
+            <input type="date" id="edit-date" name="date_acquired" class="input" />
+          </div>
+        </div>
+        <div class="form-grid cols-1" style="margin-bottom:0">
+          <div class="form-field">
+            <label class="form-label" for="edit-notes">Notes</label>
+            <textarea id="edit-notes" name="notes" class="input" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-  <script src="js/app.js"></script>
-  <script src="js/collection.js"></script>
-  <script src="js/search.js"></script>
-  <script src="js/portfolio.js"></script>
-  <script src="js/sets.js"></script>
+<!-- ── Toast container ────────────────────────────────────────── -->
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<script src="js/app.js"></script>
+<script src="js/collection.js"></script>
+<script src="js/search.js"></script>
+<script src="js/portfolio.js"></script>
+<script src="js/sets.js"></script>
 </body>
 </html>

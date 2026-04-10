@@ -16,6 +16,11 @@ async function loadPortfolio() {
     renderPortfolioSummary(summary);
     await renderPortfolioChart();
     portfolioContent.classList.remove('hidden');
+
+    updateSidebarStats(
+      summary.total_cards,
+      summary.total_value_eur,
+    );
   } catch (e) {
     toast(`Failed to load portfolio: ${e.message}`, 'error');
   } finally {
@@ -24,24 +29,23 @@ async function loadPortfolio() {
 }
 
 function renderPortfolioSummary(s) {
-  document.getElementById('summary-total-cards').textContent  = s.total_cards;
-  document.getElementById('summary-unique-cards').textContent = s.total_unique_cards;
+  document.getElementById('summary-total-cards').textContent  = s.total_cards ?? '—';
+  document.getElementById('summary-unique-cards').textContent = s.total_unique_cards ?? '—';
   document.getElementById('summary-value-eur').textContent    =
     s.total_value_eur != null ? `€${parseFloat(s.total_value_eur).toFixed(2)}` : '—';
   document.getElementById('summary-priced').textContent =
-    `${s.cards_with_prices} / ${s.cards_with_prices + s.cards_without_prices}`;
+    `${s.cards_with_prices} / ${(s.cards_with_prices ?? 0) + (s.cards_without_prices ?? 0)}`;
 
   setValueTbody.innerHTML = (s.value_by_set || []).map(row => `
     <tr>
       <td>${row.set_name}</td>
-      <td>${row.card_count}</td>
-      <td class="price-value">€${row.total_eur.toFixed(2)}</td>
+      <td><span class="cell-mono">${row.card_count}</span></td>
+      <td><span class="cell-price">€${parseFloat(row.total_eur).toFixed(2)}</span></td>
     </tr>
-  `).join('') || '<tr><td colspan="3" class="text-muted" style="text-align:center">No data</td></tr>';
+  `).join('') || '<tr><td colspan="3" class="text-muted" style="text-align:center;padding:1.5rem">No data</td></tr>';
 }
 
 async function renderPortfolioChart() {
-  // Aggregate total portfolio value per day from price history across all collection cards
   const canvas = document.getElementById('portfolio-chart');
 
   try {
@@ -52,7 +56,6 @@ async function renderPortfolioChart() {
       return;
     }
 
-    // Fetch price history for all cards and sum by date
     const dailyTotals = {};
     for (const entry of collection) {
       try {
@@ -84,12 +87,13 @@ async function renderPortfolioChart() {
         labels: days,
         datasets: [{
           label: 'Portfolio Value (EUR)',
-          data: days.map(d => dailyTotals[d].toFixed(2)),
+          data: days.map(d => parseFloat(dailyTotals[d].toFixed(2))),
           borderColor: '#F27E00',
-          backgroundColor: 'rgba(242,126,0,0.1)',
+          backgroundColor: 'rgba(242,126,0,0.08)',
           borderWidth: 2,
           pointRadius: 3,
-          tension: 0.3,
+          pointBackgroundColor: '#F27E00',
+          tension: 0.35,
           fill: true,
         }],
       },
@@ -97,18 +101,28 @@ async function renderPortfolioChart() {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-          legend: { labels: { color: '#e8eaf0' } },
+          legend: { labels: { color: '#9ca3b0', font: { size: 12 } } },
           tooltip: {
+            backgroundColor: '#18181B',
+            borderColor: '#2a2a2f',
+            borderWidth: 1,
+            titleColor: '#e4e4e7',
+            bodyColor: '#a1a1aa',
             callbacks: {
               label: ctx => `€${parseFloat(ctx.parsed.y).toFixed(2)}`,
             },
           },
         },
         scales: {
-          x: { ticks: { color: '#7a7f9a' }, grid: { color: '#2e3250' } },
+          x: {
+            ticks: { color: '#71717a', font: { size: 11 } },
+            grid: { color: '#27272a' },
+            border: { color: '#27272a' },
+          },
           y: {
-            ticks: { color: '#7a7f9a', callback: v => `€${v}` },
-            grid: { color: '#2e3250' },
+            ticks: { color: '#71717a', font: { size: 11 }, callback: v => `€${v}` },
+            grid: { color: '#27272a' },
+            border: { color: '#27272a' },
           },
         },
       },
@@ -120,10 +134,17 @@ async function renderPortfolioChart() {
 }
 
 // ── Manual price refresh button ──────────────────────────────────
-document.getElementById('btn-refresh-prices').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-refresh-prices');
-  btn.disabled = true;
-  btn.textContent = 'Refreshing…';
+const btnRefresh = document.getElementById('btn-refresh-prices');
+btnRefresh.addEventListener('click', async () => {
+  btnRefresh.disabled = true;
+  btnRefresh.querySelector('span') && (btnRefresh.querySelector('span').textContent = 'Refreshing…');
+
+  const originalHTML = btnRefresh.innerHTML;
+  btnRefresh.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" style="animation:spin 1s linear infinite"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+    Refreshing…
+  `;
+
   try {
     const result = await apiFetch('/prices/refresh', { method: 'POST' });
     toast(`Refreshed ${result.refreshed} cards (${result.skipped} skipped)`);
@@ -131,7 +152,7 @@ document.getElementById('btn-refresh-prices').addEventListener('click', async ()
   } catch (e) {
     toast(`Refresh failed: ${e.message}`, 'error');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '&#8635; Refresh Prices';
+    btnRefresh.disabled = false;
+    btnRefresh.innerHTML = originalHTML;
   }
 });
