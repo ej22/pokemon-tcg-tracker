@@ -69,6 +69,47 @@ Complete build log and reference for the PokéTCG Tracker project.
 - Frontend serves at `http://localhost:3003`
 - pgAdmin accessible at `http://localhost:8015`
 
+### Phase 10 — Netflix-style card poster grid + image proxy
+
+**Collection page:** Table replaced with a responsive CSS Grid poster layout (`repeat(auto-fill, minmax(148px, 1fr))`). Each card is a `3:4.2` aspect-ratio portrait poster:
+- Card artwork fills the frame (`position: absolute; inset: 0; object-fit: cover`)
+- Bottom gradient overlay shows card name, set code, and CardMarket price
+- Top-right: condition chip + quantity badge (if qty > 1)
+- Top-left: edit and delete action buttons, revealed on hover
+- P&L indicator dot (green/red) next to the price
+- Clicking the card body opens the existing edit modal
+- Graceful placeholder ("P" tile) shown if image fails to load
+
+**Sets page (set detail):** Card-in-set table also replaced with the same poster grid; hover reveals an + Add to Collection button.
+
+**Image proxy (`GET /api/images/{card_api_id}`):** PokéWallet's `/images/{id}` endpoint requires the API key, so the frontend cannot call it directly. A new FastAPI router (`routers/images.py`) proxies the request server-side and returns the JPEG with `Cache-Control: public, max-age=86400`. Browsers cache each image for 24 hours — first page load triggers one API call per card image; subsequent loads are free.
+
+**Image URL format:** The image is retrieved using the card's `api_id` field (the full `pk_...` hash) — no stripping required. The frontend constructs `/api/images/{card.api_id}` and the proxy passes it directly to PokéWallet.
+
+**Migration 0002:** Adds `image_url TEXT` column to `cards` (nullable). Currently unused for images (we construct the URL dynamically), but retained for potential future use if PokéWallet exposes direct CDN URLs.
+
+**CSS key fixes:**
+- Poster images and placeholder divs must use `position: absolute; inset: 0` — `height: 100%` does not resolve against a parent whose height is set by `aspect-ratio` alone
+- `loading="lazy"` removed from img tags as it suppressed images before layout was computed
+- Added `?v=N` version params to CSS/JS `<link>`/`<script>` tags to enable cache-busting on deploy
+
+### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
+
+Complete frontend overhaul on the `ui-redesign` branch:
+
+- **Layout:** Single-column stacked views replaced with a persistent left sidebar (`nav.sidebar`) + `main.main-content` layout using CSS Grid
+- **Theme:** Replaced ad-hoc dark mode with a full CSS design token system (`--bg-primary`, `--accent`, etc.) targeting OLED-friendly near-black backgrounds (`#0a0a0a`)
+- **Typography:** Added Inter (UI) + Fira Code (card IDs/numbers) via Google Fonts; previously system fonts only
+- **Navigation:** Sidebar shows active-section highlight and live stats (collection count, portfolio value, sets count) via `updateSidebarStats()`
+- **Loading states:** Skeleton shimmer rows replace blank states while data loads (collection table, sets browser)
+- **Icons:** Heroicons SVGs replace all emoji icons (edit/delete buttons, nav items)
+- **Empty states:** Illustrated empty states added for collection and sets views
+- **Toasts:** Multi-toast queue with slide-in animation; previously single toast that overwrote itself
+- **Charts:** Chart.js theme updated to match dark tokens (grid lines, tick colours, tooltip background)
+- **Chips/badges:** Condition tags, variant badges, and set chips use a unified `.chip` component
+
+Files changed: `frontend/css/style.css` (full rewrite), `frontend/index.html` (full rewrite), `frontend/js/app.js`, `frontend/js/collection.js`, `frontend/js/portfolio.js`, `frontend/js/search.js`, `frontend/js/sets.js`
+
 ### Phase 8 — Post-build fixes (sets API field mapping)
 Discovered while investigating a missing card (Tyrunt MEP070):
 
@@ -133,6 +174,7 @@ open http://localhost:3003
 | `backend/routers/collection.py` | Collection CRUD endpoints |
 | `backend/routers/prices.py` | Price fetch and refresh endpoints |
 | `backend/routers/portfolio.py` | Portfolio value aggregation |
+| `backend/routers/images.py` | Card artwork proxy (adds API key, returns JPEG) |
 | `backend/scheduler.py` | APScheduler job definitions |
 | `frontend/js/app.js` | Routing, fetch helpers, toast |
 | `frontend/js/collection.js` | Collection table + edit modal |
