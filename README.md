@@ -63,7 +63,9 @@ open http://localhost:3003
 | DELETE | `/api/collection/{id}`              | Remove a card from the collection             |
 | GET    | `/api/search?q={query}`             | Search for cards via PokéWallet               |
 | GET    | `/api/sets`                         | List all cached sets                          |
+| GET    | `/api/sets/mine`                    | List only sets the user has tracked cards in  |
 | GET    | `/api/sets/{set_id}/cards`          | List cards in a set                           |
+| GET    | `/api/sets/{set_code}/image`        | Proxy set logo artwork from PokéWallet        |
 | GET    | `/api/prices/{card_api_id}`         | Get latest cached prices for a card           |
 | GET    | `/api/prices/{card_api_id}/history` | Full price history for a card                 |
 | POST   | `/api/prices/refresh`               | Force-refresh prices for all collection cards |
@@ -81,7 +83,7 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Portfolio view** — KPI summary cards (estimated value, card count, priced count) and a Chart.js line chart showing portfolio value over time, plus a value-by-set breakdown table.
 
-**Sets view** — Searchable grid of all 700+ Pokémon TCG sets. Clicking a set loads its cards as a poster grid with the same artwork display; hover reveals an Add to Collection button for each card.
+**Sets view** — Poster grid of sets the user has tracked cards in. Each set is a 16:9 landscape card showing the official set logo (fetched via the image proxy), with the set name, release date, card count, and owned-card count. Clicking a set loads its cards as a portrait poster grid with the same artwork display; hover reveals an Add to Collection button for each card.
 
 **Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}`. The backend fetches the image from PokéWallet using the server-side API key and returns it with `Cache-Control: public, max-age=86400` so browsers cache each image for 24 hours — subsequent page loads make no API calls for images.
 

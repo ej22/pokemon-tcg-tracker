@@ -2,12 +2,14 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models import Set, Card
+from models import Set, Card, CollectionEntry
 from schemas import SetOut, CardOut
 from services import pokewallet
 
@@ -24,6 +26,41 @@ def _sets_are_stale(sets: list[Set]) -> bool:
     if oldest.tzinfo is None:
         oldest = oldest.replace(tzinfo=timezone.utc)
     return datetime.now(timezone.utc) - oldest > timedelta(days=SET_CACHE_TTL_DAYS)
+
+
+@router.get("/mine")
+async def list_owned_sets(session: AsyncSession = Depends(get_db)):
+    """Return only sets the user has collection entries in, with owned card count."""
+    count_result = await session.execute(
+        select(Card.set_id, func.sum(CollectionEntry.quantity).label("owned_count"))
+        .join(CollectionEntry, CollectionEntry.card_api_id == Card.api_id)
+        .where(Card.set_id.is_not(None))
+        .group_by(Card.set_id)
+    )
+    set_counts = {row.set_id: int(row.owned_count) for row in count_result}
+
+    if not set_counts:
+        return []
+
+    sets_result = await session.execute(
+        select(Set)
+        .where(Set.set_id.in_(set_counts.keys()))
+        .order_by(Set.release_date.desc())
+    )
+    sets = sets_result.scalars().all()
+
+    return [
+        {
+            "set_id": s.set_id,
+            "set_code": s.set_code,
+            "name": s.name,
+            "language": s.language,
+            "release_date": s.release_date,
+            "card_count": s.card_count,
+            "owned_count": set_counts.get(s.set_id, 0),
+        }
+        for s in sets
+    ]
 
 
 @router.get("", response_model=list[SetOut])
@@ -114,3 +151,33 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
         cards = result.scalars().all()
 
     return cards
+
+
+@router.get("/{set_code}/image")
+async def get_set_image(set_code: str):
+    """Proxy set artwork from PokéWallet. Cached by the browser for 7 days."""
+    api_key = os.environ.get("POKEWALLET_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="API key not configured")
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            resp = await client.get(
+                f"https://api.pokewallet.io/sets/{set_code}/image",
+                headers={"X-API-Key": api_key},
+            )
+        except httpx.RequestError as exc:
+            logger.warning("Set image fetch failed for %s: %s", set_code, exc)
+            raise HTTPException(status_code=502, detail="Image fetch failed")
+
+    if resp.status_code == 404:
+        raise HTTPException(status_code=404, detail="Set image not found")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Upstream returned {resp.status_code}")
+
+    content_type = resp.headers.get("content-type", "image/png")
+    return Response(
+        content=resp.content,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=604800"},  # 7 days
+    )

@@ -93,6 +93,38 @@ Complete build log and reference for the PokéTCG Tracker project.
 - `loading="lazy"` removed from img tags as it suppressed images before layout was computed
 - Added `?v=N` version params to CSS/JS `<link>`/`<script>` tags to enable cache-busting on deploy
 
+### Phase 11 — Tracked-sets view + set image proxy
+
+**Motivation:** The sets page previously showed all 700+ sets from PokéWallet. Changed to show only sets the user actually has cards in, so the view is immediately relevant and fast to load.
+
+**Backend — `GET /api/sets/mine`** (`routers/sets.py`):
+- New endpoint defined *before* `/{set_id}/cards` to avoid FastAPI routing `mine` as a set_id
+- Queries `collection` → `cards` → `sets` join: `SELECT card.set_id, SUM(collection.quantity) AS owned_count … GROUP BY card.set_id`
+- Fetches matching `Set` rows and returns `{set_id, set_code, name, language, release_date, card_count, owned_count}` ordered by `release_date DESC`
+- Returns `[]` immediately if no sets found (no API call)
+
+**Backend — `GET /api/sets/{set_code}/image`** (`routers/sets.py`):
+- Proxies `https://api.pokewallet.io/sets/{set_code}/image` with the server-side API key
+- Set identifier accepts either `set_code` (e.g. `JTG`) or numeric `set_id` — both are returned by `/sets/mine`
+- Returns the image with `Cache-Control: public, max-age=604800` (7 days, longer than card images since set logos never change)
+
+**Frontend — sets.js rewrite:**
+- `loadSets()` now calls `/sets/mine` instead of `/sets`
+- `renderSetsGrid(sets)` renders `.poster-card.set-poster` elements; image source is `/api/sets/{set_code}/image`
+- `openSetDetail(set)` accepts the full set object (no DOM lookup); renders 12 skeleton placeholders while cards load
+- `renderSetCards(cards)` renders portrait poster cards (same as collection view) with + Add button on hover
+- `setPlaceholder(label)` shows first 2 chars of set code as text tile if the image fails
+
+**CSS design decisions for set posters:**
+- Set logos are ~300×95px landscape images — portrait `3:4.2` ratio used for card posters is wrong for these
+- Final solution: `.sets-card-grid` uses `minmax(260px, 1fr)` columns; `.set-poster` uses `aspect-ratio: 16/9` with `object-fit: contain` and `padding: 1.25rem 1.5rem 3rem` so the logo sits in a dark letterbox rather than being stretched
+- Cards-within-set view retains the portrait `card-grid` with `minmax(148px, 1fr)` columns and `3:4.2` ratio
+
+**Bugs fixed in this phase:**
+1. `#set-detail { display: none }` CSS rule (ID specificity) overrode `classList.remove('hidden')` — JS calls had no effect. Fixed by removing the ID-selector rule entirely and relying solely on the `.hidden` utility class.
+2. First attempt at set poster ratio was `aspect-ratio: 3/1` — this collapsed the card to ~50px tall making the logo unreadable. Replaced with `16/9`.
+3. `openSetDetail()` was looking up DOM attributes on the clicked element rather than receiving the set object directly — JS serialisation round-trip caused data loss. Fixed by passing the full set object via `onclick`.
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
