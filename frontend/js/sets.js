@@ -44,7 +44,7 @@ function renderSetsGrid(sets) {
     const relDate   = s.release_date ? s.release_date.slice(0, 10) : '';
 
     return `
-      <div class="poster-card" data-id="${s.set_id}" role="button" tabindex="0"
+      <div class="poster-card set-poster" data-id="${s.set_id}" role="button" tabindex="0"
            aria-label="${s.name}"
            onclick="openSetDetail(${JSON.stringify(s).replace(/"/g, '&quot;')})"
            onkeydown="if(event.key==='Enter')openSetDetail(${JSON.stringify(s).replace(/"/g, '&quot;')})">
