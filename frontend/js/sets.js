@@ -91,15 +91,13 @@ function renderSetCards(cards) {
   }
 
   setCardsGrid.innerHTML = cards.map(c => {
-    const imageUrl  = c.image_url || '';
+    const imageUrl  = `/api/images/${c.api_id}`;
     const cardJson  = JSON.stringify(c).replace(/"/g, '&quot;');
     const rarityBadge = c.rarity
       ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem">${c.rarity}</span>`
       : '';
 
-    const imgContent = imageUrl
-      ? `<img src="${imageUrl}" alt="${c.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`
-      : `<div class="poster-placeholder"><div class="poster-placeholder-icon">P</div></div>`;
+    const imgContent = `<img src="${imageUrl}" alt="${c.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
 
     return `
       <div class="poster-card set-poster-card">

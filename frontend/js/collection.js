@@ -65,7 +65,7 @@ function renderCollection(entries) {
     totalCards += (e.quantity || 1);
 
     const priceStr  = price != null ? `€${parseFloat(price).toFixed(2)}` : null;
-    const imageUrl  = e.card.image_url || '';
+    const imageUrl  = `/api/images/${e.card.api_id}`;
     const entryJson = JSON.stringify(e).replace(/"/g, '&quot;');
     const qty       = e.quantity > 1 ? `<span class="poster-qty-badge">×${e.quantity}</span>` : '';
 
@@ -78,9 +78,7 @@ function renderCollection(entries) {
         : `<span class="poster-pnl-dot pnl-neg" title="€${diff.toFixed(2)}"></span>`;
     }
 
-    const imgContent = imageUrl
-      ? `<img src="${imageUrl}" alt="${e.card.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`
-      : `<div class="poster-placeholder"><div class="poster-placeholder-icon">P</div></div>`;
+    const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" loading="lazy" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
 
     return `
       <div class="poster-card" role="button" tabindex="0"
