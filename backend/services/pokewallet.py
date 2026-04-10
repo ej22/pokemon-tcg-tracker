@@ -99,9 +99,10 @@ async def get_sets() -> list[dict[str, Any]]:
         resp.raise_for_status()
         _track_call()
         data = resp.json()
+        # API returns {"success": true, "data": [...]}
         if isinstance(data, list):
             return data
-        return data.get("results", data.get("sets", []))
+        return data.get("data", data.get("results", data.get("sets", [])))
 
 
 async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
@@ -121,11 +122,15 @@ async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
         _track_call()
         data = resp.json()
 
-    if isinstance(data, dict) and "sets" in data:
+    if isinstance(data, dict) and "sets" in data and "cards" not in data:
         logger.info("Disambiguation response for set %s — multiple matches", set_code)
         return []
 
-    raw_list = data if isinstance(data, list) else data.get("cards", data.get("results", []))
+    # API returns {"success": true, "set": {...}, "cards": [...]}
+    if isinstance(data, list):
+        raw_list = data
+    else:
+        raw_list = data.get("cards", data.get("results", []))
     return [_normalise_card(r) for r in raw_list]
 
 

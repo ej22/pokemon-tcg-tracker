@@ -37,25 +37,26 @@ async def list_sets(session: AsyncSession = Depends(get_db)):
         now = datetime.now(timezone.utc)
 
         for raw in raw_sets:
-            set_id = str(raw.get("groupId") or raw.get("id") or raw.get("set_id", ""))
+            # API fields: set_id, set_code, name, card_count, language, release_date
+            set_id = str(raw.get("set_id") or raw.get("groupId") or raw.get("id") or "")
             if not set_id:
                 continue
             existing = await session.get(Set, set_id)
             if existing:
                 existing.name = raw.get("name", existing.name)
-                existing.set_code = raw.get("abbreviation") or raw.get("setCode") or raw.get("set_code")
+                existing.set_code = raw.get("set_code") or raw.get("abbreviation") or raw.get("setCode")
                 existing.language = raw.get("language")
-                existing.release_date = raw.get("publishedOn") or raw.get("releaseDate") or raw.get("release_date")
-                existing.card_count = raw.get("totalCards") or raw.get("card_count") or 0
+                existing.release_date = raw.get("release_date") or raw.get("publishedOn") or raw.get("releaseDate")
+                existing.card_count = raw.get("card_count") or raw.get("totalCards") or 0
                 existing.last_fetched_at = now
             else:
                 s = Set(
                     set_id=set_id,
-                    set_code=raw.get("abbreviation") or raw.get("setCode") or raw.get("set_code"),
+                    set_code=raw.get("set_code") or raw.get("abbreviation") or raw.get("setCode"),
                     name=raw.get("name", ""),
                     language=raw.get("language"),
-                    release_date=raw.get("publishedOn") or raw.get("releaseDate") or raw.get("release_date"),
-                    card_count=raw.get("totalCards") or raw.get("card_count") or 0,
+                    release_date=raw.get("release_date") or raw.get("publishedOn") or raw.get("releaseDate"),
+                    card_count=raw.get("card_count") or raw.get("totalCards") or 0,
                     last_fetched_at=now,
                 )
                 session.add(s)
