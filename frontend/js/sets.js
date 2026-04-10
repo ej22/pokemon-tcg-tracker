@@ -1,13 +1,13 @@
 /* ── Sets browser ─────────────────────────────────────────────── */
 
-const setsLoading    = document.getElementById('sets-loading');
-const setsEmpty      = document.getElementById('sets-empty');
-const setsGrid       = document.getElementById('sets-grid');
-const setDetail      = document.getElementById('set-detail');
-const setDetailTitle = document.getElementById('set-detail-title');
+const setsLoading     = document.getElementById('sets-loading');
+const setsEmpty       = document.getElementById('sets-empty');
+const setsGrid        = document.getElementById('sets-grid');
+const setDetail       = document.getElementById('set-detail');
+const setDetailTitle  = document.getElementById('set-detail-title');
 const setCardsLoading = document.getElementById('set-cards-loading');
-const setCardsGrid   = document.getElementById('set-cards-grid');
-const btnBackSets    = document.getElementById('btn-back-sets');
+const setCardsGrid    = document.getElementById('set-cards-grid');
+const btnBackSets     = document.getElementById('btn-back-sets');
 
 async function loadSets() {
   setsLoading.classList.remove('hidden');
@@ -16,13 +16,17 @@ async function loadSets() {
   setDetail.classList.add('hidden');
 
   try {
-    const sets = await apiFetch('/sets');
+    const sets = await apiFetch('/sets/mine');
     renderSetsGrid(sets);
   } catch (e) {
     toast(`Failed to load sets: ${e.message}`, 'error');
   } finally {
     setsLoading.classList.add('hidden');
   }
+}
+
+function setPlaceholder(label) {
+  return `<div class="poster-placeholder"><div class="poster-placeholder-icon">${label.slice(0, 2)}</div></div>`;
 }
 
 function renderSetsGrid(sets) {
@@ -32,52 +36,52 @@ function renderSetsGrid(sets) {
   }
 
   const subtitle = document.getElementById('sets-subtitle');
-  if (subtitle) subtitle.textContent = `${sets.length} sets available`;
+  if (subtitle) subtitle.textContent = `${sets.length} set${sets.length === 1 ? '' : 's'} in your collection`;
 
-  setsGrid.innerHTML = sets.map(s => `
-    <div class="set-card" data-id="${s.set_id}">
-      <div class="set-card-header">
-        <span class="set-card-name">${s.name}</span>
-        ${s.set_code ? `<span class="chip chip-default" style="font-size:0.7rem;padding:0.15rem 0.45rem">${s.set_code}</span>` : ''}
-      </div>
-      <div class="set-card-meta">
-        ${s.card_count ? `<span>${s.card_count} cards</span>` : ''}
-        ${s.release_date ? `<span>${s.release_date.slice(0, 10)}</span>` : ''}
-        ${s.language ? `<span>${s.language}</span>` : ''}
-      </div>
-    </div>
-  `).join('');
+  setsGrid.innerHTML = sets.map(s => {
+    const code      = s.set_code || String(s.set_id);
+    const imageUrl  = `/api/sets/${code}/image`;
+    const relDate   = s.release_date ? s.release_date.slice(0, 10) : '';
+
+    return `
+      <div class="poster-card" data-id="${s.set_id}" role="button" tabindex="0"
+           aria-label="${s.name}"
+           onclick="openSetDetail(${JSON.stringify(s).replace(/"/g, '&quot;')})"
+           onkeydown="if(event.key==='Enter')openSetDetail(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+        <img src="${imageUrl}" alt="${s.name}" onerror="this.parentElement.innerHTML=setPlaceholder('${code}')">
+
+        <div class="poster-badges">
+          <span class="poster-qty-badge">${s.owned_count} owned</span>
+          ${code ? `<span class="poster-set-code">${code}</span>` : ''}
+        </div>
+
+        <div class="poster-overlay">
+          <div class="poster-name">${s.name}</div>
+          <div class="poster-meta">
+            <span>${relDate}</span>
+            <span>${s.card_count ? `${s.card_count} cards` : ''}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
 
   setsGrid.classList.remove('hidden');
-
-  setsGrid.querySelectorAll('.set-card').forEach(el => {
-    el.addEventListener('click', () => {
-      const set = sets.find(s => s.set_id === el.dataset.id);
-      if (set) openSetDetail(set);
-    });
-  });
 }
 
 async function openSetDetail(set) {
   setsGrid.classList.add('hidden');
   setDetail.classList.remove('hidden');
   setDetailTitle.textContent = `${set.name}${set.set_code ? ` (${set.set_code})` : ''}`;
-  setCardsGrid.innerHTML = '';
-  setCardsLoading.classList.remove('hidden');
-
-  // Show skeleton while loading
   setCardsGrid.innerHTML = Array.from({ length: 12 }, () =>
     `<div class="poster-skeleton skeleton"></div>`
   ).join('');
+  setCardsLoading.classList.add('hidden');
 
   try {
     const cards = await apiFetch(`/sets/${set.set_id}/cards`);
     renderSetCards(cards);
   } catch (e) {
     toast(`Failed to load set cards: ${e.message}`, 'error');
-  } finally {
-    setCardsLoading.classList.remove('hidden');
-    setCardsLoading.classList.add('hidden');
   }
 }
 
@@ -94,14 +98,12 @@ function renderSetCards(cards) {
     const imageUrl  = `/api/images/${c.api_id}`;
     const cardJson  = JSON.stringify(c).replace(/"/g, '&quot;');
     const rarityBadge = c.rarity
-      ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem">${c.rarity}</span>`
+      ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem;backdrop-filter:blur(6px);background:rgba(0,0,0,0.55);border-color:rgba(255,255,255,0.15);color:#fff">${c.rarity}</span>`
       : '';
-
-    const imgContent = `<img src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
 
     return `
       <div class="poster-card set-poster-card">
-        ${imgContent}
+        <img src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">
 
         <div class="poster-badges">
           ${rarityBadge}

@@ -860,7 +860,8 @@ textarea.input { resize: vertical; min-height: 64px; }
 .poster-badges .chip-hp  { background: rgba(239,68,68,0.75);   border-color: rgba(239,68,68,0.4);   color: #fff; }
 .poster-badges .chip-dmg { background: rgba(168,85,247,0.75);  border-color: rgba(168,85,247,0.4);  color: #fff; }
 
-.poster-qty-badge {
+.poster-qty-badge,
+.poster-set-code {
   font-size: 0.62rem;
   font-weight: 700;
   color: rgba(255,255,255,0.8);
@@ -869,6 +870,11 @@ textarea.input { resize: vertical; min-height: 64px; }
   border-radius: 100px;
   padding: 0.1rem 0.35rem;
   backdrop-filter: blur(6px);
+}
+
+.poster-set-code {
+  color: var(--accent);
+  border-color: rgba(242,126,0,0.3);
 }
 
 /* Top-left action buttons (appear on hover) */
