@@ -1,5 +1,7 @@
 # PokéTCG Tracker
 
+![Collection Page](/frontend.png "Frontend")
+
 A self-hosted Pokémon TCG collection tracker. Log your card hits, track CardMarket EUR prices, and watch your portfolio value grow — all running locally in Docker.
 
 ## Architecture
