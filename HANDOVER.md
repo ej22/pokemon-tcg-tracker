@@ -125,6 +125,39 @@ Complete build log and reference for the PokéTCG Tracker project.
 2. First attempt at set poster ratio was `aspect-ratio: 3/1` — this collapsed the card to ~50px tall making the logo unreadable. Replaced with `16/9`.
 3. `openSetDetail()` was looking up DOM attributes on the clicked element rather than receiving the set object directly — JS serialisation round-trip caused data loss. Fixed by passing the full set object via `onclick`.
 
+### Phase 12 — Mobile responsive layout
+
+**Motivation:** The app had a basic `@media (max-width: 1023px)` breakpoint that showed a top bar with text-only nav links, but at ≤600px the nav links became completely blank (icons were `display: none`, text was hidden by a second rule). Edit/delete/add buttons on poster cards were hover-only and therefore inaccessible on touch. Tested on an iPhone 16e.
+
+**Navigation:**
+- At ≤600px: top bar hidden entirely; a fixed `<nav class="bottom-nav">` bar replaces it. Three tabs (Collection, Portfolio, Sets) each show a 22px icon above a small label. Uses the same `.nav-link[data-view]` pattern the existing JS routing already queries — no JS changes needed.
+- At 601–1023px (tablets): top bar retained; nav links redesigned to show icon + stacked label (was text-only).
+- The bottom nav uses `position: fixed; bottom: 0` with `transform: translateZ(0)` for iOS compositing stability.
+
+**iOS safe area fix (critical):**
+The bottom nav was initially `height: 60px` with `padding-bottom: env(safe-area-inset-bottom)`. This meant the bar's background only covered 60px — the home indicator zone (~34px on iPhone 16e) was below the background, causing page content to bleed through during scroll. Fixed by:
+```css
+height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+padding-bottom: env(safe-area-inset-bottom, 0px);
+```
+The bar now grows to ~94px on iPhone, its background covers the full home indicator area, and icons sit in the upper 60px portion.
+
+**Poster card actions on touch:**
+```css
+@media (hover: none) {
+  .poster-actions { opacity: 1; transform: none; }
+  .poster-action-btn { width: 32px; height: 32px; }
+}
+```
+Edit/delete/add buttons are always visible on touch devices instead of requiring a CSS hover.
+
+**Other mobile fixes:**
+- Sets grid: `1fr` on phones (was `repeat(2, 1fr)` — at ~160px wide, 16:9 cards were ~90px tall and logos were unreadable)
+- Touch targets: `.input { min-height: 44px }`, `.btn { min-height: 44px }`, `.btn-sm { min-height: 36px }`
+- Toast container repositioned to `bottom: calc(var(--bottom-nav-h) + 0.75rem)` so it clears the bottom nav
+- `main-content` gets `padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px))` so content doesn't hide behind the bar
+- CSS cache-buster bumped to `?v=10`
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:

@@ -79,13 +79,15 @@ Full interactive docs: `http://localhost:8014/docs`
 
 The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no build step.
 
-**Collection view** — Netflix-style poster grid. Each card displays its artwork (fetched via the image proxy), condition chip, quantity badge, and price in a bottom gradient overlay. Hover reveals edit and delete action buttons. Clicking the card body opens the edit modal.
+**Collection view** — Netflix-style poster grid. Each card displays its artwork (fetched via the image proxy), condition chip, quantity badge, and price in a bottom gradient overlay. Hover reveals edit and delete action buttons (always visible on touch devices). Clicking the card body opens the edit modal.
 
 **Portfolio view** — KPI summary cards (estimated value, card count, priced count) and a Chart.js line chart showing portfolio value over time, plus a value-by-set breakdown table.
 
 **Sets view** — Poster grid of sets the user has tracked cards in. Each set is a 16:9 landscape card showing the official set logo (fetched via the image proxy), with the set name, release date, card count, and owned-card count. Clicking a set loads its cards as a portrait poster grid with the same artwork display; hover reveals an Add to Collection button for each card.
 
 **Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}`. The backend fetches the image from PokéWallet using the server-side API key and returns it with `Cache-Control: public, max-age=86400` so browsers cache each image for 24 hours — subsequent page loads make no API calls for images.
+
+**Mobile layout** — Fully responsive. On phones (≤600px) the sidebar and top bar are hidden; a fixed bottom navigation bar with icon + label tabs takes over. On tablets (601–1023px) a compact top bar with icon + label navigation replaces the sidebar. Touch targets meet the 44px minimum, poster card action buttons are always visible on touch devices, and the bottom nav background extends into the iOS safe area so it never clips behind the home indicator.
 
 ## How the Price Cache Works
 
