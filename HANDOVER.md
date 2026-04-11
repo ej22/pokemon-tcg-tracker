@@ -177,6 +177,63 @@ Edit/delete/add buttons are always visible on touch devices instead of requiring
 - `app.js`: document-level `click` listener — if click target is not inside `.poster-card`, remove `.tapped` from all cards.
 - CSS/JS cache-buster bumped to `?v=11`.
 
+### Phase 14 — PriceCharting scraping for promo cards missing from PokéWallet
+
+**Motivation:** PokéWallet's database is incomplete for some promo cards (e.g. Black Star Promos shipped in ETBs, like *N's Zekrom V1 MEP031*). These cards exist and have prices on [PriceCharting.com](https://www.pricecharting.com) but cannot be found via search. The feature lets users paste a PriceCharting product URL to add any missing card.
+
+**Scraper — `backend/services/pricecharting_scraper.py`:**
+- `canonicalize_url(raw)`: validates the URL is a `pricecharting.com/game/{set}/{card}` product page; raises `InvalidPriceChartingURLError` otherwise.
+- `build_api_id(url)`: returns `f"pc_{sha1(canonical)[:16]}"` — a synthetic primary key that fits the existing `String` PK schema.
+- `fetch_html(url)`: uses `curl_cffi` with Chrome 124 TLS impersonation to avoid bot detection; falls back to `httpx` if `curl_cffi` is unavailable.
+- `parse_product(html, url)`: extracts name (strips set suffix from h1), set name (breadcrumb), card number (regex on name), image URL (Google Storage CDN `img`), and USD prices from `#used_price` / `#new_price` DOM IDs.
+- Returns a `ScrapedCard` dataclass. Raises `ScrapeParseError` if name or price are missing.
+
+**Currency service — `backend/services/currency.py`:**
+- Fetches USD→EUR rate from `api.frankfurter.app` (ECB data, no API key).
+- 24-hour in-memory cache with `Decimal("0.92")` fallback if the API is unreachable.
+
+**Schema changes (migrations 0003 + 0004):**
+- `cards.source` (NOT NULL, default `"pokewallet"`) — discriminator: `"pokewallet"` or `"pricecharting_scrape"`.
+- `cards.source_url` (nullable TEXT) — stores the PriceCharting URL for scraped cards.
+- Scraped cards use a `pc_{set_code}` placeholder `sets` row (same pattern as PokéWallet placeholder sets).
+
+**Price pipeline — `backend/services/price_cache.py`:**
+- `scrape_and_store(session, url, force_refresh)`: validates URL, checks cache freshness, scrapes, converts USD→EUR, upserts card + prices.
+- `get_price()` branches on `card.source == "pricecharting_scrape"` to call the scraper path instead of PokéWallet.
+- Price mapping: `avg_price` + `market_price` ← ungraded EUR; `trend_price` ← new/mint EUR; `source = "pricecharting_scrape"`.
+
+**New endpoint — `POST /api/cards/manual`** (`backend/routers/manual_cards.py`):
+- Accepts `{"url": "https://www.pricecharting.com/..."}`.
+- Returns a card shape (api_id, name, set_name, set_code, card_number, image_url, source, source_url) compatible with the existing add-to-collection flow.
+- Error handling: 422 for invalid/unparseable URLs, 502 for network failures.
+
+**Image proxy update — `backend/routers/images.py`:**
+- If `card.source == "pricecharting_scrape"`, fetches `card.image_url` directly from Google Storage CDN (no PokéWallet API key needed).
+- Falls through to the PokéWallet proxy path for all other cards.
+
+**Nightly scheduler update — `backend/scheduler.py`:**
+- Phase 2 added after the PokéWallet loop: queries cards with `source == "pricecharting_scrape"`, refreshes them with `asyncio.sleep(random.uniform(2.0, 4.0))` throttle between requests, capped at 60 per night.
+
+**Frontend:**
+- Add Card modal: "Card not found on PokéWallet?" small link replaced with a full-width secondary button **Add by PriceCharting URL**; subtitle "For promo cards not found in PokéWallet".
+- URL step: input + Fetch button; error display below; "← Back to search" link.
+- Collection poster: **PC** chip badge for `source === "pricecharting_scrape"` cards; **Stale** chip if `last_fetched_at` exceeds TTL.
+- `bestPrice()` and `isPriceStale()` filters updated to include `"pricecharting_scrape"` source.
+- CSS/JS cache-buster bumped to `?v=14`.
+
+**Dependencies added:**
+- `selectolax==0.3.21` — fast HTML parser
+- `curl_cffi==0.7.4` — Chrome TLS impersonation for bot-resistant scraping
+
+**Smoke test result (N's Zekrom #31):**
+```
+POST /api/cards/manual {"url":"https://www.pricecharting.com/game/pokemon-promo/n%27s-zekrom-31"}
+→ api_id: pc_a876624e3899bfdf, name: "N's Zekrom #31", set_code: PROMO
+   avg=8.80 market=8.80 trend=10.58 currency=EUR
+```
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
@@ -229,6 +286,8 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 - **Sets browser on first boot:** visiting `http://localhost:3003/#sets` (or calling `GET /api/sets`) triggers the first fetch of all sets from PokéWallet (~763 sets). This makes one API call and takes a few seconds. After that, sets are cached for 7 days.
 - **Rate limit counters are in-memory** — restart resets them. A heavy manual refresh shortly after a restart could momentarily exceed the daily limit before the counter catches up. Low risk in practice given the 1000/day free tier.
 - **No authentication** — the app is intended for a private server behind Tailscale. Do not expose port 3003/8014 to the public internet.
+- **PriceCharting scraping reliability** — PriceCharting currently serves clean HTML with no Cloudflare interference, but this could change. If scraping starts failing, check logs for `ScrapeError` / `ScrapeParseError`. The last cached price is retained on failure; the Stale badge will appear in the UI after the TTL lapses.
+- **PriceCharting prices are USD** — converted to EUR at fetch time using the ECB rate cached for 24 hours. If `api.frankfurter.app` is unreachable the fallback rate `0.92` is used.
 - **Price history chart requires 2+ days** of data before it renders. On day one, the chart area shows a "Not enough data" message.
 - **Variant matching in portfolio** is best-effort — if a collection entry's `variant` field doesn't exactly match a `price_cache` variant_type, the first cached entry is used as a fallback.
 - **pgAdmin `version` warning** in Docker Compose logs — the `version:` key is obsolete in Compose v2 spec. It's cosmetic and doesn't affect function.
@@ -254,12 +313,15 @@ open http://localhost:3003
 | `backend/main.py` | FastAPI app entry point, lifespan (starts/stops scheduler) |
 | `backend/models.py` | All SQLAlchemy ORM models |
 | `backend/services/pokewallet.py` | All PokéWallet API calls + normalisation |
-| `backend/services/price_cache.py` | Cache TTL logic, `get_price()` function |
+| `backend/services/price_cache.py` | Cache TTL logic, `get_price()`, `scrape_and_store()` |
+| `backend/services/pricecharting_scraper.py` | PriceCharting HTML scraper (curl_cffi + selectolax) |
+| `backend/services/currency.py` | USD→EUR conversion via Frankfurter/ECB API |
 | `backend/routers/collection.py` | Collection CRUD endpoints |
 | `backend/routers/prices.py` | Price fetch and refresh endpoints |
 | `backend/routers/portfolio.py` | Portfolio value aggregation |
-| `backend/routers/images.py` | Card artwork proxy (adds API key, returns JPEG) |
-| `backend/scheduler.py` | APScheduler job definitions |
+| `backend/routers/images.py` | Card artwork proxy (PokéWallet or Google Storage CDN) |
+| `backend/routers/manual_cards.py` | `POST /api/cards/manual` — scrape by PriceCharting URL |
+| `backend/scheduler.py` | APScheduler job definitions (two-phase nightly refresh) |
 | `frontend/js/app.js` | Routing, fetch helpers, toast |
 | `frontend/js/collection.js` | Collection table + edit modal |
 | `frontend/js/search.js` | Search modal + add form |

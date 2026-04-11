@@ -61,6 +61,7 @@ open http://localhost:3003
 | POST   | `/api/collection`                   | Add a card to the collection                  |
 | PUT    | `/api/collection/{id}`              | Update a collection entry                     |
 | DELETE | `/api/collection/{id}`              | Remove a card from the collection             |
+| POST   | `/api/cards/manual`                 | Scrape and store a card from a PriceCharting URL |
 | GET    | `/api/search?q={query}`             | Search for cards via PokéWallet               |
 | GET    | `/api/sets`                         | List all cached sets                          |
 | GET    | `/api/sets/mine`                    | List only sets the user has tracked cards in  |
@@ -108,18 +109,28 @@ PokéWallet free tier allows ~1,000 calls/day and ~100/hour. The backend:
 - Resets both counters on schedule (hourly / daily)
 - If the nightly scheduler hits the hourly limit mid-run it pauses and resumes the next night
 
-## PokéWallet Data Gaps
+## PokéWallet Data Gaps & PriceCharting Fallback
 
-PokéWallet's database does not contain every card. Newer sets in particular may be listed in the sets index but only partially populated. If a card search returns no results, it means PokéWallet hasn't added it yet — this is outside the app's control. You can periodically check whether the set's card count in the Sets browser has grown to confirm when new cards are added.
+PokéWallet's database does not contain every card. Newer sets and promo cards (e.g. Black Star Promos shipped in ETBs) may be missing entirely. For these cards, you can add them using a PriceCharting URL instead:
+
+1. Find the card on [PriceCharting.com](https://www.pricecharting.com) and copy its URL (e.g. `https://www.pricecharting.com/game/pokemon-promo/n%27s-zekrom-31`)
+2. In the Add Card modal, click **Add by PriceCharting URL**
+3. Paste the URL and click Fetch
+
+The card is scraped, stored with a synthetic `pc_` prefixed ID, and behaves like any other card in the collection, portfolio, and history chart. Prices are in USD on PriceCharting — the app converts them to EUR via the ECB rate (Frankfurter API, updated daily). The nightly price refresh job re-scrapes these cards automatically (throttled, max 60 per night).
+
+Cards added this way display a **PC** badge in the collection grid. If the price data is older than the cache TTL, a **Stale** badge is shown instead.
 
 ## Scheduled Jobs
 
-| Job                    | Schedule           | What it does                              |
-|------------------------|--------------------|-------------------------------------------|
-| Nightly price refresh  | Every day at 02:00 | Force-refreshes prices for all owned cards|
-| Weekly sets refresh    | Sundays at 03:00   | Re-fetches the full sets list             |
-| Hourly counter reset   | Every hour :00     | Resets the hourly API call counter        |
-| Daily counter reset    | Every day at 00:00 | Resets the daily API call counter         |
+| Job                    | Schedule           | What it does                                                      |
+|------------------------|--------------------|-------------------------------------------------------------------|
+| Nightly price refresh  | Every day at 02:00 | Refreshes PokéWallet prices, then re-scrapes PriceCharting cards  |
+| Weekly sets refresh    | Sundays at 03:00   | Re-fetches the full sets list                                     |
+| Hourly counter reset   | Every hour :00     | Resets the hourly API call counter                                |
+| Daily counter reset    | Every day at 00:00 | Resets the daily API call counter                                 |
+
+The nightly job runs in two phases: PokéWallet cards first (stops if the hourly API limit is hit), then PriceCharting-scraped cards (capped at 60 per night, 2–4 s throttle between requests).
 
 ## Manual Price Refresh
 
