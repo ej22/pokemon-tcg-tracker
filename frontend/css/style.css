@@ -864,7 +864,9 @@ textarea.input { resize: vertical; min-height: 64px; }
 .poster-badges .chip-lp  { background: rgba(234,179,8,0.75);   border-color: rgba(234,179,8,0.4);   color: #fff; }
 .poster-badges .chip-mp  { background: rgba(249,115,22,0.75);  border-color: rgba(249,115,22,0.4);  color: #fff; }
 .poster-badges .chip-hp  { background: rgba(239,68,68,0.75);   border-color: rgba(239,68,68,0.4);   color: #fff; }
-.poster-badges .chip-dmg { background: rgba(168,85,247,0.75);  border-color: rgba(168,85,247,0.4);  color: #fff; }
+.poster-badges .chip-dmg   { background: rgba(168,85,247,0.75);  border-color: rgba(168,85,247,0.4);  color: #fff; }
+.poster-badges .chip-cm    { background: rgba(59,130,246,0.75);   border-color: rgba(59,130,246,0.4);  color: #fff; }
+.poster-badges .chip-stale { background: rgba(239,68,68,0.75);    border-color: rgba(239,68,68,0.4);   color: #fff; }
 
 .poster-qty-badge,
 .poster-set-code {

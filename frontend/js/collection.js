@@ -30,11 +30,23 @@ function conditionChip(cond) {
 
 function bestPrice(prices, variant) {
   if (!prices || !prices.length) return null;
-  const cm = prices.filter(p => p.source === 'cardmarket');
+  // Accept PokéWallet CardMarket prices and PriceCharting-scraped prices
+  const cm = prices.filter(p => p.source === 'cardmarket' || p.source === 'pricecharting_scrape');
   if (!cm.length) return null;
   const matched = variant ? cm.find(p => p.variant_type === variant) : null;
   const p = matched || cm[0];
   return p.trend_price ?? p.avg_price ?? p.mid_price ?? null;
+}
+
+function isPriceStale(prices, ttlHours = 48) {
+  if (!prices || !prices.length) return false;
+  const cm = prices.filter(p => p.source === 'cardmarket' || p.source === 'pricecharting_scrape');
+  if (!cm.length) return false;
+  const now = Date.now();
+  return cm.every(p => {
+    const fetched = new Date(p.last_fetched_at).getTime();
+    return (now - fetched) > ttlHours * 3600 * 1000;
+  });
 }
 
 function renderCollection(entries) {
@@ -80,6 +92,11 @@ function renderCollection(entries) {
 
     const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
 
+    const isScraped  = e.card.source === 'pricecharting_scrape';
+    const isStale    = isScraped && isPriceStale(e.prices);
+    const pcBadge    = isScraped ? `<span class="chip chip-cm" title="Price from PriceCharting (USD→EUR)">PC</span>` : '';
+    const staleBadge = isStale   ? `<span class="chip chip-stale" title="Price may be outdated">Stale</span>` : '';
+
     return `
       <div class="poster-card" role="button" tabindex="0"
            aria-label="${e.card.name}"
@@ -90,6 +107,8 @@ function renderCollection(entries) {
         <div class="poster-badges">
           ${conditionChip(e.condition)}
           ${qty}
+          ${pcBadge}
+          ${staleBadge}
         </div>
 
         <div class="poster-actions" onclick="event.stopPropagation()">

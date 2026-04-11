@@ -3,6 +3,7 @@
 const modalOverlay  = document.getElementById('modal-overlay');
 const modalClose    = document.getElementById('modal-close');
 const stepSearch    = document.getElementById('modal-step-search');
+const stepUrl       = document.getElementById('modal-step-url');
 const stepForm      = document.getElementById('modal-step-form');
 const searchInput   = document.getElementById('search-input');
 const btnSearch     = document.getElementById('btn-search');
@@ -13,14 +14,25 @@ const addCardForm   = document.getElementById('add-card-form');
 const variantSelect = document.getElementById('add-variant');
 const btnBackSearch = document.getElementById('btn-back-search');
 
+const btnShowUrlMode  = document.getElementById('btn-show-url-mode');
+const btnBackToSearch = document.getElementById('btn-back-to-search');
+const cmUrlInput      = document.getElementById('cm-url-input');
+const btnFetchUrl     = document.getElementById('btn-fetch-url');
+const urlLoading      = document.getElementById('url-loading');
+const urlError        = document.getElementById('url-error');
+
 let selectedCard = null;
 
 function openAddModal() {
   selectedCard = null;
   stepSearch.classList.remove('hidden');
+  stepUrl.classList.add('hidden');
   stepForm.classList.add('hidden');
   searchInput.value = '';
   searchResults.innerHTML = '';
+  cmUrlInput.value = '';
+  urlError.classList.add('hidden');
+  urlError.textContent = '';
   modalOverlay.classList.remove('hidden');
   setTimeout(() => searchInput.focus(), 50);
 }
@@ -36,6 +48,20 @@ modalOverlay.addEventListener('click', e => {
 
 btnBackSearch.addEventListener('click', () => {
   stepForm.classList.add('hidden');
+  stepSearch.classList.remove('hidden');
+});
+
+// ── Toggle URL mode ──────────────────────────────────────────────
+btnShowUrlMode.addEventListener('click', () => {
+  stepSearch.classList.add('hidden');
+  stepUrl.classList.remove('hidden');
+  urlError.classList.add('hidden');
+  urlError.textContent = '';
+  setTimeout(() => cmUrlInput.focus(), 50);
+});
+
+btnBackToSearch.addEventListener('click', () => {
+  stepUrl.classList.add('hidden');
   stepSearch.classList.remove('hidden');
 });
 
@@ -87,6 +113,35 @@ function renderSearchResults(results) {
   });
 }
 
+// ── Fetch by CardMarket URL ───────────────────────────────────────
+async function fetchByUrl() {
+  const raw = cmUrlInput.value.trim();
+  if (!raw) return;
+
+  urlLoading.classList.remove('hidden');
+  urlError.classList.add('hidden');
+  urlError.textContent = '';
+  btnFetchUrl.disabled = true;
+
+  try {
+    const card = await apiFetch('/cards/manual', {
+      method: 'POST',
+      body: JSON.stringify({ url: raw }),
+    });
+    stepUrl.classList.add('hidden');
+    pickCard(card);
+  } catch (err) {
+    urlError.textContent = err.message || 'Failed to fetch card from CardMarket.';
+    urlError.classList.remove('hidden');
+  } finally {
+    urlLoading.classList.add('hidden');
+    btnFetchUrl.disabled = false;
+  }
+}
+
+btnFetchUrl.addEventListener('click', fetchByUrl);
+cmUrlInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchByUrl(); });
+
 // ── Pick card → show add form ────────────────────────────────────
 async function pickCard(card) {
   selectedCard = card;
@@ -97,6 +152,7 @@ async function pickCard(card) {
     card.set_code ? `(${card.set_code})` : '',
     card.card_number ? `#${card.card_number}` : '',
     card.rarity || '',
+    card.source === 'pricecharting_scrape' ? '• PriceCharting' : '',
   ].filter(Boolean).join(' · ');
 
   // Populate variant dropdown from price API
@@ -121,6 +177,7 @@ async function pickCard(card) {
   }
 
   stepSearch.classList.add('hidden');
+  stepUrl.classList.add('hidden');
   stepForm.classList.remove('hidden');
 }
 

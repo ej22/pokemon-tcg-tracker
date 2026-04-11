@@ -32,6 +32,8 @@ class CardOut(BaseModel):
     hp: Optional[str]
     stage: Optional[str]
     image_url: Optional[str]
+    source: str = "pokewallet"
+    source_url: Optional[str] = None
     last_fetched_at: datetime
 
     model_config = {"from_attributes": True}

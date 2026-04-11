@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=11" />
+  <link rel="stylesheet" href="css/style.css?v=13" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -225,7 +225,7 @@
     </div>
     <div class="modal-body">
 
-      <!-- Step 1: Search -->
+      <!-- Step 1a: Search -->
       <div id="modal-step-search">
         <div class="input-group">
           <input type="text" id="search-input" class="input" placeholder="Search by card name…" autocomplete="off" aria-label="Search cards" />
@@ -236,6 +236,33 @@
         </div>
         <div id="search-loading" class="hidden" style="padding:1rem 0;text-align:center;font-size:0.825rem;color:var(--text-subtle)">Searching PokéWallet…</div>
         <div id="search-results" class="search-results"></div>
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);text-align:center">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-show-url-mode" style="font-size:0.75rem;color:var(--text-muted)">
+            Card not found on PokéWallet? Add by PriceCharting URL
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 1b: CardMarket URL -->
+      <div id="modal-step-url" class="hidden">
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem">
+          Paste a PriceCharting product URL for a promo or missing card.<br>
+          <span style="color:var(--text-subtle);font-size:0.72rem">e.g. https://www.pricecharting.com/game/pokemon-promo/n%27s-zekrom-31</span>
+        </p>
+        <div class="input-group">
+          <input type="url" id="cm-url-input" class="input" placeholder="https://www.pricecharting.com/game/pokemon-promo/…" autocomplete="off" aria-label="PriceCharting product URL" />
+          <button class="btn btn-primary" id="btn-fetch-url">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+            Fetch
+          </button>
+        </div>
+        <div id="url-loading" class="hidden" style="padding:1rem 0;text-align:center;font-size:0.825rem;color:var(--text-subtle)">Fetching from PriceCharting…</div>
+        <div id="url-error" class="hidden" style="padding:0.5rem 0;font-size:0.8rem;color:var(--red)"></div>
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-back-to-search" style="font-size:0.75rem;color:var(--text-muted)">
+            ← Back to search
+          </button>
+        </div>
       </div>
 
       <!-- Step 2: Add form -->
@@ -390,10 +417,10 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=8"></script>
-<script src="js/collection.js?v=8"></script>
-<script src="js/search.js?v=8"></script>
-<script src="js/portfolio.js?v=8"></script>
-<script src="js/sets.js?v=8"></script>
+<script src="js/app.js?v=13"></script>
+<script src="js/collection.js?v=13"></script>
+<script src="js/search.js?v=13"></script>
+<script src="js/portfolio.js?v=13"></script>
+<script src="js/sets.js?v=13"></script>
 </body>
 </html>

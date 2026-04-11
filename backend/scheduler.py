@@ -1,5 +1,7 @@
 """APScheduler nightly price refresh and weekly sets refresh."""
+import asyncio
 import logging
+import random
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -12,35 +14,52 @@ logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
 
+# Max number of CardMarket scrapes per nightly run (prevents hammering CM at scale)
+_SCRAPE_NIGHT_CAP = 60
+
 
 async def nightly_price_refresh() -> None:
     """Refresh prices for all cards in the collection. Runs at 02:00 daily."""
     from sqlalchemy import select
-    from models import CollectionEntry
+    from models import CollectionEntry, Card
 
     logger.info("Nightly price refresh starting")
-    refreshed = 0
-    skipped = 0
 
+    # ── Phase 1: PokéWallet cards ────────────────────────────────────
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(CollectionEntry.card_api_id).distinct()
         )
-        card_ids = [row[0] for row in result.fetchall()]
+        all_ids = [row[0] for row in result.fetchall()]
 
-    if not card_ids:
+    if not all_ids:
         logger.info("No cards in collection — skipping price refresh")
         return
 
-    logger.info("Refreshing prices for %d unique cards", len(card_ids))
+    # Split into PokéWallet vs PriceCharting-scraped
+    pw_ids: list[str] = []
+    scrape_ids: list[str] = []
 
-    for card_id in card_ids:
+    async with AsyncSessionLocal() as session:
+        for card_id in all_ids:
+            card = await session.get(Card, card_id)
+            if card and card.source == "pricecharting_scrape":
+                scrape_ids.append(card_id)
+            else:
+                pw_ids.append(card_id)
+
+    # Refresh PokéWallet cards
+    refreshed = 0
+    skipped = 0
+    logger.info("Refreshing PokéWallet prices for %d cards", len(pw_ids))
+
+    for card_id in pw_ids:
         if pokewallet.is_hourly_limit_reached():
             logger.warning(
                 "Hourly API limit reached mid-refresh — pausing. "
-                "Refreshed %d/%d cards. Will resume tomorrow.",
+                "Refreshed %d/%d PokéWallet cards. Will resume tomorrow.",
                 refreshed,
-                len(card_ids),
+                len(pw_ids),
             )
             break
 
@@ -52,10 +71,55 @@ async def nightly_price_refresh() -> None:
                 skipped += 1
 
     logger.info(
-        "Nightly price refresh complete — refreshed: %d, skipped: %d, total API calls today: %d",
+        "PokéWallet refresh complete — refreshed: %d, skipped: %d, total API calls today: %d",
         refreshed,
         skipped,
         pokewallet.get_calls_today(),
+    )
+
+    # ── Phase 2: CardMarket scraped cards ────────────────────────────
+    if not scrape_ids:
+        logger.info("No CardMarket-scraped cards in collection — skipping scrape pass")
+        return
+
+    capped = scrape_ids[:_SCRAPE_NIGHT_CAP]
+    if len(scrape_ids) > _SCRAPE_NIGHT_CAP:
+        logger.warning(
+            "Scrape cap reached: %d scraped cards total, refreshing first %d only",
+            len(scrape_ids),
+            _SCRAPE_NIGHT_CAP,
+        )
+
+    scrape_ok = 0
+    scrape_fail = 0
+    logger.info("Refreshing PriceCharting scraped prices for %d cards", len(capped))
+
+    from services.pricecharting_scraper import ScrapeError
+    from services.price_cache import scrape_and_store
+    from services.currency import refresh_rate
+
+    # Refresh exchange rate once before the scrape pass
+    await refresh_rate()
+
+    for card_id in capped:
+        async with AsyncSessionLocal() as session:
+            card = await session.get(Card, card_id)
+            if not card or not card.source_url:
+                continue
+            try:
+                await scrape_and_store(session, card.source_url, force_refresh=True)
+                scrape_ok += 1
+            except ScrapeError as e:
+                logger.warning("Nightly scrape failed for %s: %s", card_id, e)
+                scrape_fail += 1
+
+        # Throttle: wait between 2 and 4 seconds between requests
+        await asyncio.sleep(random.uniform(2.0, 4.0))
+
+    logger.info(
+        "PriceCharting scrape pass complete — ok: %d, failed: %d",
+        scrape_ok,
+        scrape_fail,
     )
 
 
