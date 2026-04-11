@@ -87,7 +87,7 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}`. The backend fetches the image from PokéWallet using the server-side API key and returns it with `Cache-Control: public, max-age=86400` so browsers cache each image for 24 hours — subsequent page loads make no API calls for images.
 
-**Mobile layout** — Fully responsive. On phones (≤600px) the sidebar and top bar are hidden; a fixed bottom navigation bar with icon + label tabs takes over. On tablets (601–1023px) a compact top bar with icon + label navigation replaces the sidebar. Touch targets meet the 44px minimum, poster card action buttons are always visible on touch devices, and the bottom nav background extends into the iOS safe area so it never clips behind the home indicator.
+**Mobile layout** — Fully responsive. On phones (≤600px) the sidebar and top bar are hidden; a fixed bottom navigation bar with icon + label tabs takes over. On tablets (601–1023px) a compact top bar with icon + label navigation replaces the sidebar. Touch targets meet the 44px minimum. On touch devices, tapping a poster card reveals the edit/delete action buttons; a second tap on the card body opens the edit modal; tapping outside dismisses them. The bottom nav background extends into the iOS safe area so it never clips behind the home indicator.
 
 ## How the Price Cache Works
 

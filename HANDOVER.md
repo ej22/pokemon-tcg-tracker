@@ -158,6 +158,25 @@ Edit/delete/add buttons are always visible on touch devices instead of requiring
 - `main-content` gets `padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px))` so content doesn't hide behind the bar
 - CSS cache-buster bumped to `?v=10`
 
+### Phase 13 — Tap-to-reveal poster card actions (touch)
+
+**Problem:** After Phase 12, poster card action buttons (edit/delete on collection cards, Add on set-detail cards) were always visible on touch devices via `@media (hover: none) { .poster-actions { opacity: 1 } }`. This looked cluttered and was aesthetically poor.
+
+**Solution:** Tap-to-reveal with a `.tapped` CSS class:
+
+- `@media (hover: none)` rule changed to target `.poster-card.tapped .poster-actions` instead of `.poster-actions` directly — actions are hidden by default and only shown when `.tapped` is present.
+- **First tap** on a card: JS adds `.tapped` to that card (removing it from any other), revealing the action buttons. The edit modal does NOT open.
+- **Tap an action button**: fires immediately (delete or edit). `stopPropagation()` on the `.poster-actions` wrapper prevents the card-level handler from also firing.
+- **Second tap** on the same card body (already `.tapped`): removes `.tapped` and opens the edit modal.
+- **Tap outside any card**: a `document`-level click listener removes `.tapped` from all cards.
+- **Desktop unchanged**: hover reveals buttons, single click opens modal — no `.tapped` logic runs when `(hover: hover)`.
+
+**Implementation:**
+- `collection.js`: removed inline `onclick`/`onkeydown` from card div; added `data-entry="${entryJson}"` attribute; delegated click listener on `collectionGrid` handles tap toggle + modal open; `openEditModal()` clears `.tapped` before opening.
+- `sets.js`: same delegated listener on `setCardsGrid` for `.set-poster-card` tap toggle (Add button only, no second-tap action needed).
+- `app.js`: document-level `click` listener — if click target is not inside `.poster-card`, remove `.tapped` from all cards.
+- CSS/JS cache-buster bumped to `?v=11`.
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:

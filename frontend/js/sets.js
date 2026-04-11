@@ -143,3 +143,17 @@ btnBackSets.addEventListener('click', () => {
   setDetail.classList.add('hidden');
   setsGrid.classList.remove('hidden');
 });
+
+// ── Tap-to-reveal Add button on set cards (touch devices) ────────
+setCardsGrid.addEventListener('click', e => {
+  const card = e.target.closest('.set-poster-card');
+  if (!card) return;
+  if (window.matchMedia('(hover: none)').matches) {
+    if (!card.classList.contains('tapped')) {
+      document.querySelectorAll('.set-poster-card.tapped').forEach(c => c.classList.remove('tapped'));
+      card.classList.add('tapped');
+      return;
+    }
+    card.classList.remove('tapped');
+  }
+});

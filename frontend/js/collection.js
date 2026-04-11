@@ -83,8 +83,8 @@ function renderCollection(entries) {
     return `
       <div class="poster-card" role="button" tabindex="0"
            aria-label="${e.card.name}"
-           onclick="openEditModal(${entryJson})"
-           onkeydown="if(event.key==='Enter')openEditModal(${entryJson})">
+           data-entry="${entryJson}"
+           onkeydown="if(event.key==='Enter')openEditModal(JSON.parse(this.dataset.entry))">
         ${imgContent}
 
         <div class="poster-badges">
@@ -140,6 +140,7 @@ const editForm       = document.getElementById('edit-card-form');
 const editModalClose = document.getElementById('edit-modal-close');
 
 function openEditModal(entry) {
+  document.querySelectorAll('.poster-card.tapped').forEach(c => c.classList.remove('tapped'));
   const f = editForm.elements;
   f.entry_id.value      = entry.id;
   f.quantity.value       = entry.quantity;
@@ -182,3 +183,19 @@ editForm.addEventListener('submit', async e => {
 });
 
 document.getElementById('btn-add-card').addEventListener('click', () => openAddModal());
+
+// ── Tap-to-reveal actions (touch devices) ────────────────────────
+// First tap: reveal edit/delete buttons. Second tap: open edit modal.
+collectionGrid.addEventListener('click', e => {
+  const card = e.target.closest('.poster-card[data-entry]');
+  if (!card) return;
+  if (window.matchMedia('(hover: none)').matches) {
+    if (!card.classList.contains('tapped')) {
+      document.querySelectorAll('.poster-card.tapped').forEach(c => c.classList.remove('tapped'));
+      card.classList.add('tapped');
+      return;
+    }
+    card.classList.remove('tapped');
+  }
+  openEditModal(JSON.parse(card.dataset.entry));
+});

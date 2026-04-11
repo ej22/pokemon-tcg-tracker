@@ -59,6 +59,13 @@ function updateSidebarStats(totalCards, valueEur) {
   if (valueEl) valueEl.textContent = valueEur != null ? `€${parseFloat(valueEur).toFixed(2)}` : '—';
 }
 
+// ── Dismiss tapped cards on outside tap ─────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.closest('.poster-card')) {
+    document.querySelectorAll('.poster-card.tapped').forEach(c => c.classList.remove('tapped'));
+  }
+});
+
 // ── Fetch helpers ────────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
   const res = await fetch(API + path, {

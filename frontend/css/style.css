@@ -1094,9 +1094,9 @@ textarea.input { resize: vertical; min-height: 64px; }
 .bottom-nav .nav-link.active svg { opacity: 1; color: var(--accent); }
 .bottom-nav .nav-link:hover { background: transparent; }
 
-/* ── Touch devices: always show poster actions ─────────────────── */
+/* ── Touch devices: show poster actions on tap (.tapped class) ─── */
 @media (hover: none) {
-  .poster-actions {
+  .poster-card.tapped .poster-actions {
     opacity: 1;
     transform: none;
   }
