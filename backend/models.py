@@ -88,6 +88,14 @@ class PriceHistory(Base):
     card: Mapped["Card"] = relationship("Card", back_populates="price_history")
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+
 class PriceCache(Base):
     __tablename__ = "price_cache"
 

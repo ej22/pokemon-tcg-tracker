@@ -1150,3 +1150,210 @@ textarea.input { resize: vertical; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── Settings button ──────────────────────────────────────────── */
+.btn-settings {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease), background var(--duration) var(--ease);
+  width: 100%;
+}
+.btn-settings svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.btn-settings:hover { color: var(--text); border-color: var(--border); background: var(--bg-elevated); }
+
+.btn-settings-topbar {
+  margin: 0;
+  width: auto;
+  padding: 0.35rem;
+  font-size: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
+}
+.btn-settings-topbar svg { width: 1.25rem; height: 1.25rem; }
+.btn-settings-topbar:hover { color: var(--text); background: var(--bg-elevated); }
+
+/* ── Settings modal ───────────────────────────────────────────── */
+.settings-section { display: flex; flex-direction: column; gap: 1rem; }
+.settings-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+.settings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.settings-row-label { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+.settings-label { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+.settings-desc { font-size: 0.78rem; color: var(--text-subtle); line-height: 1.4; }
+.settings-row-control { flex-shrink: 0; }
+
+/* Mode toggle pill */
+.mode-toggle {
+  display: flex;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.mode-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
+  white-space: nowrap;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active { background: var(--accent); color: #fff; }
+
+/* Mode description boxes */
+.settings-mode-desc {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.settings-mode-icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-mode-icon svg { width: 1.1rem; height: 1.1rem; }
+.settings-mode-icon-full { background: var(--accent-dim); color: var(--accent); }
+.settings-mode-icon-collection { background: var(--green-dim); color: var(--green); }
+
+/* Pricing warning */
+.settings-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.settings-warning svg { width: 1.1rem; height: 1.1rem; flex-shrink: 0; color: var(--red); margin-top: 0.1rem; }
+
+/* ── View toggle button ───────────────────────────────────────── */
+.btn-icon-only {
+  padding: 0.4rem;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon-only svg { width: 1.1rem; height: 1.1rem; }
+.btn-icon-only.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Set group (grouped collection view) ──────────────────────── */
+.set-group-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.set-group { margin-bottom: 0; }
+
+.set-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: border-color var(--duration) var(--ease), background var(--duration) var(--ease);
+}
+.set-group-header:hover { border-color: var(--border-subtle); background: var(--bg-elevated); }
+
+.set-group-chevron {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--text-subtle);
+  transition: transform 200ms var(--ease);
+  display: flex;
+  align-items: center;
+}
+.set-group-chevron svg { width: 0.85rem; height: 0.85rem; }
+.set-group.collapsed .set-group-chevron { transform: rotate(-90deg); }
+
+.set-group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.set-group-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.set-group-count { color: var(--text-subtle); font-size: 0.75rem; font-weight: 400; white-space: nowrap; }
+.set-group-value { color: var(--accent); font-size: 0.75rem; font-family: var(--font-mono); white-space: nowrap; }
+
+.set-group.collapsed .set-group-body { display: none; }
+.set-group-body { margin-top: 0.75rem; }
+
+/* Horizontal scroll row layout */
+.set-group-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.set-group-row::-webkit-scrollbar { height: 4px; }
+.set-group-row::-webkit-scrollbar-track { background: var(--bg-raised); border-radius: 2px; }
+.set-group-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.set-group-row::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
+.set-group-row .poster-card {
+  flex-shrink: 0;
+  width: 148px;
+  scroll-snap-align: start;
+}
+
+/* ── Topbar settings button: hide on mobile (no topbar at <=600px) */
+@media (max-width: 600px) {
+  .btn-settings-topbar { display: none; }
+}

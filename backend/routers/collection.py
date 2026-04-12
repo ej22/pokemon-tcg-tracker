@@ -6,19 +6,49 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Card, CollectionEntry, PriceCache
+from models import Card, CollectionEntry, PriceCache, Set
 from schemas import CollectionEntryCreate, CollectionEntryOut, CollectionEntryUpdate
 from services.price_cache import get_price
+from routers.settings import get_pricing_mode
 
 router = APIRouter(prefix="/api/collection", tags=["collection"])
 
 
 async def _enrich_entry(entry: CollectionEntry, session: AsyncSession) -> dict:
-    """Attach latest prices to a collection entry for the response."""
+    """Attach latest prices and set metadata to a collection entry for the response."""
     prices_result = await session.execute(
         select(PriceCache).where(PriceCache.card_api_id == entry.card_api_id)
     )
     prices = prices_result.scalars().all()
+
+    # Attach set_name and set_card_count to the card for frontend grouping
+    card = entry.card
+    set_name = None
+    set_card_count = None
+    if card.set_id:
+        card_set = await session.get(Set, card.set_id)
+        if card_set:
+            set_name = card_set.name
+            set_card_count = card_set.card_count
+
+    card_dict = {
+        "api_id": card.api_id,
+        "name": card.name,
+        "clean_name": card.clean_name,
+        "set_id": card.set_id,
+        "set_code": card.set_code,
+        "set_name": set_name,
+        "set_card_count": set_card_count,
+        "card_number": card.card_number,
+        "rarity": card.rarity,
+        "card_type": card.card_type,
+        "hp": card.hp,
+        "stage": card.stage,
+        "image_url": card.image_url,
+        "source": card.source,
+        "source_url": card.source_url,
+        "last_fetched_at": card.last_fetched_at,
+    }
 
     entry_dict = {
         "id": entry.id,
@@ -32,7 +62,7 @@ async def _enrich_entry(entry: CollectionEntry, session: AsyncSession) -> dict:
         "date_acquired": entry.date_acquired,
         "notes": entry.notes,
         "created_at": entry.created_at,
-        "card": entry.card,
+        "card": card_dict,
         "prices": prices,
     }
     return entry_dict
@@ -86,8 +116,10 @@ async def add_to_collection(
     await session.commit()
     await session.refresh(entry)
 
-    # Trigger a price fetch in the background (non-blocking)
-    await get_price(session, body.card_api_id)
+    # Fetch prices only when pricing mode is enabled
+    pricing_mode = await get_pricing_mode(session)
+    if pricing_mode == "full":
+        await get_price(session, body.card_api_id)
 
     # Reload with card relationship
     result = await session.execute(

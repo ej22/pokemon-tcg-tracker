@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine
 from models import Base
-from routers import collection, prices, sets, portfolio, search, images, manual_cards
+from routers import collection, prices, sets, portfolio, search, images, manual_cards, settings
 from scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(
@@ -49,6 +49,7 @@ app.include_router(portfolio.router)
 app.include_router(search.router)
 app.include_router(images.router)
 app.include_router(manual_cards.router)
+app.include_router(settings.router)
 
 
 @app.get("/api/health")

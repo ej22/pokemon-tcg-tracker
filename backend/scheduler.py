@@ -22,6 +22,13 @@ async def nightly_price_refresh() -> None:
     """Refresh prices for all cards in the collection. Runs at 02:00 daily."""
     from sqlalchemy import select
     from models import CollectionEntry, Card
+    from routers.settings import get_pricing_mode
+
+    async with AsyncSessionLocal() as session:
+        pricing_mode = await get_pricing_mode(session)
+    if pricing_mode != "full":
+        logger.info("Nightly price refresh skipped — pricing is disabled (collection-only mode)")
+        return
 
     logger.info("Nightly price refresh starting")
 

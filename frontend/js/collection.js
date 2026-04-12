@@ -3,6 +3,32 @@
 const collectionGrid  = document.getElementById('collection-grid');
 const collectionEmpty = document.getElementById('collection-empty');
 
+// ── View mode (flat grid vs grouped by set) ──────────────────────
+let collectionViewMode = localStorage.getItem('collectionViewMode') || 'flat';
+
+function setCollectionViewMode(mode) {
+  collectionViewMode = mode;
+  localStorage.setItem('collectionViewMode', mode);
+  const iconGrouped = document.getElementById('view-icon-grouped');
+  const iconGrid    = document.getElementById('view-icon-grid');
+  // When grouped mode is active, show the grid icon (to switch back)
+  if (iconGrouped && iconGrid) {
+    iconGrouped.classList.toggle('hidden', mode === 'grouped');
+    iconGrid.classList.toggle('hidden', mode === 'flat');
+  }
+  const btn = document.getElementById('btn-toggle-view');
+  if (btn) btn.classList.toggle('active', mode === 'grouped');
+}
+
+// Initialise toggle button state
+document.addEventListener('DOMContentLoaded', () => {
+  setCollectionViewMode(collectionViewMode);
+  document.getElementById('btn-toggle-view').addEventListener('click', () => {
+    setCollectionViewMode(collectionViewMode === 'flat' ? 'grouped' : 'flat');
+    loadCollection();
+  });
+});
+
 async function loadCollection() {
   showSkeletonCards();
 
@@ -49,6 +75,67 @@ function isPriceStale(prices, ttlHours = 48) {
   });
 }
 
+function renderPosterCard(e, pricingOn) {
+  const price     = pricingOn ? bestPrice(e.prices, e.variant) : null;
+  const priceStr  = price != null ? `€${parseFloat(price).toFixed(2)}` : null;
+  const imageUrl  = `/api/images/${e.card.api_id}`;
+  const entryJson = JSON.stringify(e).replace(/"/g, '&quot;');
+  const qty       = e.quantity > 1 ? `<span class="poster-qty-badge">×${e.quantity}</span>` : '';
+
+  let pnlDot = '';
+  if (pricingOn && e.purchase_price != null && price != null) {
+    const diff = parseFloat(price) - parseFloat(e.purchase_price);
+    pnlDot = diff >= 0
+      ? `<span class="poster-pnl-dot pnl-pos" title="+€${diff.toFixed(2)}"></span>`
+      : `<span class="poster-pnl-dot pnl-neg" title="€${diff.toFixed(2)}"></span>`;
+  }
+
+  const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
+
+  const isScraped  = e.card.source === 'pricecharting_scrape';
+  const isStale    = pricingOn && isScraped && isPriceStale(e.prices);
+  const pcBadge    = (pricingOn && isScraped) ? `<span class="chip chip-cm" title="Price from PriceCharting (USD→EUR)">PC</span>` : '';
+  const staleBadge = isStale ? `<span class="chip chip-stale" title="Price may be outdated">Stale</span>` : '';
+
+  const priceRow = pricingOn
+    ? `<span class="poster-price-row">${pnlDot}${priceStr ? `<span class="poster-price">${priceStr}</span>` : '<span class="poster-no-price">—</span>'}</span>`
+    : '';
+
+  return `
+    <div class="poster-card" role="button" tabindex="0"
+         aria-label="${e.card.name}"
+         data-entry="${entryJson}"
+         onkeydown="if(event.key==='Enter')openEditModal(JSON.parse(this.dataset.entry))">
+      ${imgContent}
+
+      <div class="poster-badges">
+        ${conditionChip(e.condition)}
+        ${qty}
+        ${pcBadge}
+        ${staleBadge}
+      </div>
+
+      <div class="poster-actions" onclick="event.stopPropagation()">
+        <button class="poster-action-btn poster-action-edit" title="Edit"
+          onclick="openEditModal(${entryJson})">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+        </button>
+        <button class="poster-action-btn poster-action-delete" title="Remove"
+          onclick="deleteEntry(${e.id})">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+        </button>
+      </div>
+
+      <div class="poster-overlay">
+        <div class="poster-name">${e.card.name}</div>
+        <div class="poster-meta">
+          <span>${e.card.set_code || ''}${e.card.card_number ? ` · ${e.card.card_number}` : ''}</span>
+          ${priceRow}
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderCollection(entries) {
   const subtitle = document.getElementById('collection-subtitle');
   if (subtitle) {
@@ -68,74 +155,114 @@ function renderCollection(entries) {
   collectionEmpty.classList.add('hidden');
   collectionGrid.classList.remove('hidden');
 
+  const pricingOn = window.appSettings?.pricing_mode !== 'collection_only';
+
+  if (collectionViewMode === 'grouped') {
+    collectionGrid.classList.remove('card-grid');
+    collectionGrid.classList.add('set-group-stack');
+    renderCollectionGrouped(entries, pricingOn);
+  } else {
+    collectionGrid.classList.remove('set-group-stack');
+    collectionGrid.classList.add('card-grid');
+    renderCollectionFlat(entries, pricingOn);
+  }
+}
+
+function renderCollectionFlat(entries, pricingOn) {
   let totalValue = 0;
   let totalCards = 0;
 
   collectionGrid.innerHTML = entries.map(e => {
-    const price = bestPrice(e.prices, e.variant);
+    const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
     if (price != null) totalValue += parseFloat(price) * (e.quantity || 1);
     totalCards += (e.quantity || 1);
-
-    const priceStr  = price != null ? `€${parseFloat(price).toFixed(2)}` : null;
-    const imageUrl  = `/api/images/${e.card.api_id}`;
-    const entryJson = JSON.stringify(e).replace(/"/g, '&quot;');
-    const qty       = e.quantity > 1 ? `<span class="poster-qty-badge">×${e.quantity}</span>` : '';
-
-    // P&L indicator dot
-    let pnlDot = '';
-    if (e.purchase_price != null && price != null) {
-      const diff = parseFloat(price) - parseFloat(e.purchase_price);
-      pnlDot = diff >= 0
-        ? `<span class="poster-pnl-dot pnl-pos" title="+€${diff.toFixed(2)}"></span>`
-        : `<span class="poster-pnl-dot pnl-neg" title="€${diff.toFixed(2)}"></span>`;
-    }
-
-    const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
-
-    const isScraped  = e.card.source === 'pricecharting_scrape';
-    const isStale    = isScraped && isPriceStale(e.prices);
-    const pcBadge    = isScraped ? `<span class="chip chip-cm" title="Price from PriceCharting (USD→EUR)">PC</span>` : '';
-    const staleBadge = isStale   ? `<span class="chip chip-stale" title="Price may be outdated">Stale</span>` : '';
-
-    return `
-      <div class="poster-card" role="button" tabindex="0"
-           aria-label="${e.card.name}"
-           data-entry="${entryJson}"
-           onkeydown="if(event.key==='Enter')openEditModal(JSON.parse(this.dataset.entry))">
-        ${imgContent}
-
-        <div class="poster-badges">
-          ${conditionChip(e.condition)}
-          ${qty}
-          ${pcBadge}
-          ${staleBadge}
-        </div>
-
-        <div class="poster-actions" onclick="event.stopPropagation()">
-          <button class="poster-action-btn poster-action-edit" title="Edit"
-            onclick="openEditModal(${entryJson})">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
-          </button>
-          <button class="poster-action-btn poster-action-delete" title="Remove"
-            onclick="deleteEntry(${e.id})">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
-          </button>
-        </div>
-
-        <div class="poster-overlay">
-          <div class="poster-name">${e.card.name}</div>
-          <div class="poster-meta">
-            <span>${e.card.set_code || ''}${e.card.card_number ? ` · ${e.card.card_number}` : ''}</span>
-            <span class="poster-price-row">
-              ${pnlDot}
-              ${priceStr ? `<span class="poster-price">${priceStr}</span>` : '<span class="poster-no-price">—</span>'}
-            </span>
-          </div>
-        </div>
-      </div>`;
+    return renderPosterCard(e, pricingOn);
   }).join('');
 
-  updateSidebarStats(totalCards, totalValue > 0 ? totalValue : null);
+  updateSidebarStats(totalCards, (pricingOn && totalValue > 0) ? totalValue : null);
+}
+
+function renderCollectionGrouped(entries, pricingOn) {
+  let totalValue = 0;
+  let totalCards = 0;
+
+  // Group by set_id
+  const groups = new Map();
+  for (const e of entries) {
+    const key = e.card.set_id || '__other__';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        setName: e.card.set_name || (e.card.set_code ? e.card.set_code : 'Other'),
+        setCardCount: e.card.set_card_count || 0,
+        entries: [],
+      });
+    }
+    groups.get(key).entries.push(e);
+  }
+
+  // Sort groups by set name
+  const sorted = [...groups.entries()].sort((a, b) =>
+    a[1].setName.localeCompare(b[1].setName)
+  );
+
+  const htmlParts = sorted.map(([setId, group]) => {
+    let groupValue = 0;
+    let groupCards = 0;
+
+    const cardsHtml = group.entries.map(e => {
+      const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
+      if (price != null) groupValue += parseFloat(price) * (e.quantity || 1);
+      totalValue += pricingOn && price != null ? parseFloat(price) * (e.quantity || 1) : 0;
+      groupCards += (e.quantity || 1);
+      totalCards += (e.quantity || 1);
+      return renderPosterCard(e, pricingOn);
+    }).join('');
+
+    const ownedCount = group.entries.reduce((s, e) => s + (e.quantity || 1), 0);
+    const totalInSet = group.setCardCount;
+    const countLabel = totalInSet > 0
+      ? `${ownedCount} / ${totalInSet} cards`
+      : `${ownedCount} card${ownedCount !== 1 ? 's' : ''}`;
+
+    const valueLabel = (pricingOn && groupValue > 0)
+      ? `<span class="set-group-value">€${groupValue.toFixed(2)}</span>`
+      : '';
+
+    const layout = window.appSettings?.grouped_layout || 'horizontal';
+    const bodyClass = layout === 'horizontal' ? 'set-group-body set-group-row' : 'set-group-body card-grid';
+    const collapsed = localStorage.getItem(`setGroup_${setId}`) === 'collapsed';
+    return `
+      <div class="set-group${collapsed ? ' collapsed' : ''}" data-set-id="${setId}">
+        <button class="set-group-header" aria-expanded="${!collapsed}">
+          <span class="set-group-chevron">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+          </span>
+          <span class="set-group-name">${group.setName}</span>
+          <span class="set-group-meta">${valueLabel}<span class="set-group-count">${countLabel}</span></span>
+        </button>
+        <div class="${bodyClass}">${cardsHtml}</div>
+      </div>`;
+  });
+
+  collectionGrid.innerHTML = htmlParts.join('');
+
+  // Delegated collapse/expand handler
+  collectionGrid.querySelectorAll('.set-group-header').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const group = btn.closest('.set-group');
+      const collapsed = group.classList.toggle('collapsed');
+      btn.setAttribute('aria-expanded', !collapsed);
+      const setId = group.dataset.setId;
+      if (collapsed) {
+        localStorage.setItem(`setGroup_${setId}`, 'collapsed');
+      } else {
+        localStorage.removeItem(`setGroup_${setId}`);
+      }
+    });
+  });
+
+  updateSidebarStats(totalCards, (pricingOn && totalValue > 0) ? totalValue : null);
 }
 
 function cardPlaceholder() {

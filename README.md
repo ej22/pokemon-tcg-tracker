@@ -1,174 +1,108 @@
 # PokéTCG Tracker
 
-![Collection Page](/frontend.png "Frontend")
+![Collection Page](/frontend.png "Collection view")
 
-A self-hosted Pokémon TCG collection tracker. Log your card hits, track CardMarket EUR prices, and watch your portfolio value grow — all running locally in Docker.
+A self-hosted app for tracking your Pokémon TCG card collection. Add your cards, see them displayed as a visual poster grid, and optionally track their CardMarket market values over time — all running locally on your own machine.
 
-## Architecture
+---
 
-| Service    | Image                | Role                                      |
-|------------|----------------------|-------------------------------------------|
-| `db`       | postgres:16-alpine   | PostgreSQL database                       |
-| `backend`  | Python 3.12 / FastAPI| REST API, price cache, APScheduler jobs   |
-| `frontend` | caddy:2-alpine       | Serves static HTML/JS, proxies `/api/*`   |
-| `pgadmin`  | dpage/pgadmin4       | Database admin UI                         |
+## What it does
 
-## Prerequisites
+- **Collection** — add cards by searching by name, then log condition, language, variant, and purchase price. Cards are displayed as a poster grid with their artwork.
+- **Sets view** — browse which sets you have cards in. See how many cards from each set you own.
+- **Portfolio** — see your collection's estimated EUR market value, with a chart showing how it's changed over time.
+- **Two modes** — run in *full mode* (prices fetched automatically from CardMarket) or *collection-only mode* (no price lookups, minimal API usage — just track what you own visually).
+- **Grouped view** — browse your collection grouped by set, with collapsible sections. Each set row scrolls horizontally, or switch to a grid layout in settings.
+- **Promo cards** — for cards not in PokéWallet, add them by pasting a PriceCharting URL.
+- **Fully self-hosted** — runs in Docker, no external accounts needed beyond a free PokéWallet API key.
 
-- Docker & Docker Compose v2
-- A [PokéWallet](https://pokewallet.io) API key
-- Ports 3003, 8014, and 8015 free on your server
+---
 
-## Setup
+## What you need
 
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2
+- A free API key from [pokewallet.io](https://pokewallet.io)
+- Ports **3003**, **8014**, and **8015** free on your machine
+
+---
+
+## Getting started
+
+**1. Clone the repo**
 ```bash
-# 1. Clone
 git clone https://github.com/ej22/pokemon-tcg-tracker.git
 cd pokemon-tcg-tracker
-
-# 2. Configure environment
-cp .env.example .env
-# Edit .env — set POKEWALLET_API_KEY and change the default passwords
-
-# 3. Start services
-docker compose up -d
-
-# 4. Run database migrations
-docker compose exec backend alembic upgrade head
-
-# 5. Open the app
-open http://localhost:3003
 ```
 
-## Environment Variables
-
-| Variable                | Description                                 | Required | Default  |
-|-------------------------|---------------------------------------------|----------|----------|
-| `POSTGRES_DB`           | Database name                               | Yes      | —        |
-| `POSTGRES_USER`         | Database user                               | Yes      | —        |
-| `POSTGRES_PASSWORD`     | Database password                           | Yes      | —        |
-| `POKEWALLET_API_KEY`    | Your PokéWallet API key (`pk_live_…`)       | Yes      | —        |
-| `PRICE_CACHE_TTL_HOURS` | Hours before a cached price is stale        | No       | `24`     |
-| `SET_CACHE_TTL_DAYS`    | Days before the sets list is refreshed      | No       | `7`      |
-| `PGADMIN_EMAIL`         | pgAdmin login email                         | Yes      | —        |
-| `PGADMIN_PASSWORD`      | pgAdmin login password                      | Yes      | —        |
-
-## API Endpoints
-
-| Method | Path                                | Description                                   |
-|--------|-------------------------------------|-----------------------------------------------|
-| GET    | `/api/collection`                   | List all collection entries with prices       |
-| POST   | `/api/collection`                   | Add a card to the collection                  |
-| PUT    | `/api/collection/{id}`              | Update a collection entry                     |
-| DELETE | `/api/collection/{id}`              | Remove a card from the collection             |
-| POST   | `/api/cards/manual`                 | Scrape and store a card from a PriceCharting URL |
-| GET    | `/api/search?q={query}`             | Search for cards via PokéWallet               |
-| GET    | `/api/sets`                         | List all cached sets                          |
-| GET    | `/api/sets/mine`                    | List only sets the user has tracked cards in  |
-| GET    | `/api/sets/{set_id}/cards`          | List cards in a set                           |
-| GET    | `/api/sets/{set_code}/image`        | Proxy set logo artwork from PokéWallet        |
-| GET    | `/api/prices/{card_api_id}`         | Get latest cached prices for a card           |
-| GET    | `/api/prices/{card_api_id}/history` | Full price history for a card                 |
-| POST   | `/api/prices/refresh`               | Force-refresh prices for all collection cards |
-| GET    | `/api/portfolio/summary`            | Portfolio value summary                       |
-| GET    | `/api/images/{card_api_id}`         | Proxy card artwork from PokéWallet (browser-cacheable) |
-| GET    | `/api/health`                       | Health check                                  |
-
-Full interactive docs: `http://localhost:8014/docs`
-
-## UI
-
-The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no build step.
-
-**Collection view** — Netflix-style poster grid. Each card displays its artwork (fetched via the image proxy), condition chip, quantity badge, and price in a bottom gradient overlay. Hover reveals edit and delete action buttons (always visible on touch devices). Clicking the card body opens the edit modal.
-
-**Portfolio view** — KPI summary cards (estimated value, card count, priced count) and a Chart.js line chart showing portfolio value over time, plus a value-by-set breakdown table.
-
-**Sets view** — Poster grid of sets the user has tracked cards in. Each set is a 16:9 landscape card showing the official set logo (fetched via the image proxy), with the set name, release date, card count, and owned-card count. Clicking a set loads its cards as a portrait poster grid with the same artwork display; hover reveals an Add to Collection button for each card.
-
-**Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}`. The backend fetches the image from PokéWallet using the server-side API key and returns it with `Cache-Control: public, max-age=86400` so browsers cache each image for 24 hours — subsequent page loads make no API calls for images.
-
-**Mobile layout** — Fully responsive. On phones (≤600px) the sidebar and top bar are hidden; a fixed bottom navigation bar with icon + label tabs takes over. On tablets (601–1023px) a compact top bar with icon + label navigation replaces the sidebar. Touch targets meet the 44px minimum. On touch devices, tapping a poster card reveals the edit/delete action buttons; a second tap on the card body opens the edit modal; tapping outside dismisses them. The bottom nav background extends into the iOS safe area so it never clips behind the home indicator.
-
-## How the Price Cache Works
-
-Prices are fetched from CardMarket (EUR) via the PokéWallet API and stored locally in two tables:
-
-- **`price_cache`** — one row per card/variant/source combination, updated in place. Used for fast lookups.
-- **`price_history`** — every price fetch appended as a new row, never overwritten. Used for historical charting.
-
-Before any API call the backend checks `price_cache`:
-- If a record exists and `last_fetched_at` is within `PRICE_CACHE_TTL_HOURS` (default 24h) → return the cached value, no API call made.
-- If the record is missing or older than the TTL → call PokéWallet, store the result, return it.
-
-### Rate limit protection
-
-PokéWallet free tier allows ~1,000 calls/day and ~100/hour. The backend:
-- Logs a warning when 800 daily calls are reached
-- Stops making calls when 80 hourly calls are reached
-- Resets both counters on schedule (hourly / daily)
-- If the nightly scheduler hits the hourly limit mid-run it pauses and resumes the next night
-
-## PokéWallet Data Gaps & PriceCharting Fallback
-
-PokéWallet's database does not contain every card. Newer sets and promo cards (e.g. Black Star Promos shipped in ETBs) may be missing entirely. For these cards, you can add them using a PriceCharting URL instead:
-
-1. Find the card on [PriceCharting.com](https://www.pricecharting.com) and copy its URL (e.g. `https://www.pricecharting.com/game/pokemon-promo/n%27s-zekrom-31`)
-2. In the Add Card modal, click **Add by PriceCharting URL**
-3. Paste the URL and click Fetch
-
-The card is scraped, stored with a synthetic `pc_` prefixed ID, and behaves like any other card in the collection, portfolio, and history chart. Prices are in USD on PriceCharting — the app converts them to EUR via the ECB rate (Frankfurter API, updated daily). The nightly price refresh job re-scrapes these cards automatically (throttled, max 60 per night).
-
-Cards added this way display a **PC** badge in the collection grid. If the price data is older than the cache TTL, a **Stale** badge is shown instead.
-
-## Scheduled Jobs
-
-| Job                    | Schedule           | What it does                                                      |
-|------------------------|--------------------|-------------------------------------------------------------------|
-| Nightly price refresh  | Every day at 02:00 | Refreshes PokéWallet prices, then re-scrapes PriceCharting cards  |
-| Weekly sets refresh    | Sundays at 03:00   | Re-fetches the full sets list                                     |
-| Hourly counter reset   | Every hour :00     | Resets the hourly API call counter                                |
-| Daily counter reset    | Every day at 00:00 | Resets the daily API call counter                                 |
-
-The nightly job runs in two phases: PokéWallet cards first (stops if the hourly API limit is hit), then PriceCharting-scraped cards (capped at 60 per night, 2–4 s throttle between requests).
-
-## Manual Price Refresh
-
-From the Portfolio view, click **↻ Refresh Prices**. This calls `POST /api/prices/refresh` and force-refreshes all cards in your collection regardless of cache TTL.
-
-Via curl:
+**2. Set up your environment**
 ```bash
-curl -X POST http://localhost:8014/api/prices/refresh
+cp .env.example .env
+```
+Open `.env` and fill in your values — at minimum, set `POKEWALLET_API_KEY` and change the database passwords from their defaults.
+
+**3. Start the app**
+```bash
+docker compose up -d
+docker compose exec backend alembic upgrade head
 ```
 
-## Database Backup
+**4. Open it in your browser**
+```
+http://localhost:3003
+```
+
+That's it. The app runs in the background and will keep prices up to date automatically overnight.
+
+---
+
+## Adding cards
+
+1. Click **Add Card** in the collection view.
+2. Search for the card by name — results come from PokéWallet's database.
+3. Pick the card, fill in condition, variant, and any other details.
+4. Click **Add to Collection**.
+
+If the card isn't in PokéWallet (some promos and newer sets), click **Add by PriceCharting URL** instead and paste the card's page URL from pricecharting.com.
+
+---
+
+## Settings
+
+Click the gear icon at the bottom of the sidebar to open settings.
+
+| Setting | What it does |
+|---------|-------------|
+| **Full mode** | Prices are fetched when you add a card and refreshed nightly at 02:00. Enables portfolio value and P&L tracking. Uses your PokéWallet API quota. |
+| **Collection only** | No price fetching at all. Use this if you just want to keep track of what you own without hitting API limits. |
+| **Grouped layout — Horizontal** | Cards within each set section scroll horizontally (default). |
+| **Grouped layout — Grid** | Cards within each set section wrap into a full grid. |
+
+---
+
+## Backup
 
 ```bash
 docker compose exec db pg_dump -U tcg_user tcg_tracker > backup_$(date +%Y%m%d).sql
 ```
 
-Restore:
-```bash
-cat backup_20240101.sql | docker compose exec -T db psql -U tcg_user tcg_tracker
-```
+---
 
-## Alembic Migrations
+## Ports
 
-```bash
-# Apply all pending migrations
-docker compose exec backend alembic upgrade head
+| Port | What's there |
+|------|-------------|
+| 3003 | The app |
+| 8014 | Backend API + Swagger docs (`/docs`) |
+| 8015 | pgAdmin (database browser) |
 
-# Check current revision
-docker compose exec backend alembic current
+---
 
-# Create a new migration
-docker compose exec backend alembic revision --autogenerate -m "description"
-```
+## For developers
 
-## Port Reference
+See [TECHNICAL.md](TECHNICAL.md) for architecture details, API reference, environment variables, migration commands, and build notes.
 
-| Port  | Service         | URL                        |
-|-------|-----------------|----------------------------|
-| 3003  | Frontend (Caddy)| http://localhost:3003       |
-| 8014  | Backend (FastAPI)| http://localhost:8014/docs |
-| 8015  | pgAdmin         | http://localhost:8015       |
+---
+
+## License
+
+This project is released under the [MIT License](LICENSE). You are free to use, modify, and distribute it for any purpose.

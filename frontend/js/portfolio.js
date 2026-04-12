@@ -8,6 +8,20 @@ const chartNoData      = document.getElementById('chart-no-data');
 let portfolioChart = null;
 
 async function loadPortfolio() {
+  const disabled = document.getElementById('portfolio-disabled');
+  const btnRefreshPrices = document.getElementById('btn-refresh-prices');
+
+  // Show disabled state when pricing is off
+  if (window.appSettings?.pricing_mode === 'collection_only') {
+    portfolioLoading.classList.add('hidden');
+    portfolioContent.classList.add('hidden');
+    disabled.classList.remove('hidden');
+    if (btnRefreshPrices) btnRefreshPrices.classList.add('hidden');
+    return;
+  }
+
+  disabled.classList.add('hidden');
+  if (btnRefreshPrices) btnRefreshPrices.classList.remove('hidden');
   portfolioLoading.classList.remove('hidden');
   portfolioContent.classList.add('hidden');
 

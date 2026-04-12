@@ -234,6 +234,77 @@ POST /api/cards/manual {"url":"https://www.pricecharting.com/game/pokemon-promo/
 
 ---
 
+### Phase 15 — Pricing mode toggle (collection-only mode)
+
+**Motivation:** Users who want to track what they own without consuming PokéWallet API quota needed a way to disable all price fetching. The pricing integration is deep but its touch points are well-defined.
+
+**New model — `AppSetting` (`backend/models.py`):**
+- Key-value settings table: `key` (PK), `value`, `updated_at`.
+- Migration `c17d2f173cf7` creates the table and seeds `pricing_mode = 'full'` for existing deployments.
+
+**New router — `backend/routers/settings.py`:**
+- `GET /api/settings` — returns all settings as a flat `{key: value}` dict.
+- `PUT /api/settings/{key}` — validates known keys (`pricing_mode` accepts `"full"` or `"collection_only"`) then upserts.
+- `get_pricing_mode(session)` — async helper used internally; returns `"full"` if no row exists (safe default).
+
+**Backend gating — three touch points:**
+1. `add_to_collection` (`routers/collection.py`) — `await get_price(...)` wrapped in `if pricing_mode == "full"`.
+2. `nightly_price_refresh` (`scheduler.py`) — checks mode at the start and returns early if `"collection_only"`. The job still fires on schedule so toggling back to full mode resumes immediately the next night.
+3. `manual_refresh` (`routers/prices.py`) — returns `{"message": "Pricing is disabled..."}` without fetching.
+
+**`_enrich_entry` update (`routers/collection.py`):**
+- Now also loads the `Set` row for each card and injects `set_name` and `set_card_count` into the card dict. Used by the grouped view for section headers and completion counts. Schema: `set_name: Optional[str] = None`, `set_card_count: Optional[int] = None` added to `CardOut`.
+
+**Frontend — settings modal:**
+- Gear icon button added to `.sidebar-footer` (desktop) and `.topbar` (tablet/mobile).
+- `#settings-modal-overlay` follows the existing modal pattern.
+- Mode toggle: two-button pill ("Full" / "Collection only"). Active state highlighted with accent colour.
+- Description card updates to explain the active mode.
+- Warning banner shown when switching TO full mode: explains API quota implications.
+- `loadSettings()` in `app.js` calls `GET /api/settings` and stores result in `window.appSettings`. Called before `routeFromHash()` on `DOMContentLoaded` so the mode is known before any view renders.
+- `applySettingsToUI()` hides the "Est. value" sidebar stat and layout toggle buttons based on mode.
+
+**Frontend — conditional rendering:**
+- `collection.js`: `renderPosterCard()` factored out of the map loop. Checks `window.appSettings.pricing_mode`; in `collection_only` mode skips `bestPrice()`, omits price row, P&L dot, and stale/PC badges.
+- `portfolio.js`: `loadPortfolio()` checks mode first. In `collection_only` mode shows `#portfolio-disabled` div (with "Open Settings" button) instead of loading KPIs/chart. Hides "Refresh prices" button.
+- `app.js`: "Est. value" sidebar stat row hidden in `collection_only` mode.
+
+---
+
+### Phase 16 — Collection grouped by set with collapsible sections
+
+**Motivation:** Users want to see their collection organised by set, with the ability to collapse sets they're done with. Especially useful in collection-only mode for tracking set completion progress.
+
+**View toggle:**
+- Toggle button (list/grid icon) added to the collection page-actions bar. State stored in `localStorage` as `collectionViewMode` (`flat` or `grouped`).
+- When switching modes, `collectionGrid`'s class is swapped: `card-grid` for flat mode, `set-group-stack` for grouped mode. This was the critical fix — leaving `card-grid` on the outer container caused set groups to be placed into grid cells, making sections appear side by side as a single row instead of stacking vertically.
+
+**Grouped rendering — `renderCollectionGrouped(entries, pricingOn)` (`collection.js`):**
+- Groups entries by `card.set_id`. Entries without a set_id go under key `"__other__"` (displayed as "Other").
+- Groups sorted alphabetically by set name.
+- Each group renders as `.set-group` with a collapsible header + body.
+- Header shows: chevron, set name, owned/total count (`12 / 198 cards`), and EUR value (full mode only).
+- Collapse state persists per set in `localStorage` (`setGroup_{setId}`).
+- Delegated click handler on headers toggles `.collapsed` class and `aria-expanded`.
+
+**Layout setting:**
+- `grouped_layout` stored in `localStorage` (`horizontal` default, `grid` alternative).
+- Surfaced in the settings modal as a second toggle row ("Horizontal" / "Grid"), separated from pricing mode by a `.settings-divider`.
+- In `renderCollectionGrouped`, the body element gets class `set-group-row` (horizontal) or `card-grid` (grid) based on the setting.
+- `window.appSettings.grouped_layout` is read at render time; changing the setting in the modal triggers an immediate re-render if currently in grouped view.
+
+**Horizontal scroll rows (`.set-group-row`):**
+- `display: flex; overflow-x: auto; scroll-snap-type: x proximity`.
+- Poster cards fixed at `width: 148px; flex-shrink: 0` to prevent them from stretching.
+- Thin styled scrollbar (4px height) visible on desktop.
+
+**CSS structure:**
+- `.set-group-stack` — vertical flex column with `0.5rem` gap. Applied to `#collection-grid` in grouped mode.
+- `.set-group-header` — full-width button, dark raised background, chevron rotates 90° when collapsed.
+- `.set-group-row` — horizontal scroll container with snap and styled scrollbar.
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
@@ -311,21 +382,22 @@ open http://localhost:3003
 | File | Role |
 |------|------|
 | `backend/main.py` | FastAPI app entry point, lifespan (starts/stops scheduler) |
-| `backend/models.py` | All SQLAlchemy ORM models |
+| `backend/models.py` | All SQLAlchemy ORM models (including `AppSetting`) |
 | `backend/services/pokewallet.py` | All PokéWallet API calls + normalisation |
 | `backend/services/price_cache.py` | Cache TTL logic, `get_price()`, `scrape_and_store()` |
 | `backend/services/pricecharting_scraper.py` | PriceCharting HTML scraper (curl_cffi + selectolax) |
 | `backend/services/currency.py` | USD→EUR conversion via Frankfurter/ECB API |
-| `backend/routers/collection.py` | Collection CRUD endpoints |
-| `backend/routers/prices.py` | Price fetch and refresh endpoints |
+| `backend/routers/collection.py` | Collection CRUD; enriches entries with set_name/set_card_count |
+| `backend/routers/prices.py` | Price fetch and refresh endpoints (gated on pricing_mode) |
 | `backend/routers/portfolio.py` | Portfolio value aggregation |
 | `backend/routers/images.py` | Card artwork proxy (PokéWallet or Google Storage CDN) |
 | `backend/routers/manual_cards.py` | `POST /api/cards/manual` — scrape by PriceCharting URL |
-| `backend/scheduler.py` | APScheduler job definitions (two-phase nightly refresh) |
-| `frontend/js/app.js` | Routing, fetch helpers, toast |
-| `frontend/js/collection.js` | Collection table + edit modal |
+| `backend/routers/settings.py` | App settings CRUD + `get_pricing_mode()` helper |
+| `backend/scheduler.py` | APScheduler job definitions; nightly refresh gated on pricing_mode |
+| `frontend/js/app.js` | Routing, fetch helpers, toast, settings modal, `loadSettings()` |
+| `frontend/js/collection.js` | Poster grid, grouped view, collapsible sections, view toggle |
 | `frontend/js/search.js` | Search modal + add form |
-| `frontend/js/portfolio.js` | Portfolio view + Chart.js |
+| `frontend/js/portfolio.js` | Portfolio view + Chart.js; disabled state in collection-only mode |
 | `frontend/js/sets.js` | Sets browser + set detail |
 
 ### How the cache works

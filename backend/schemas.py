@@ -26,6 +26,8 @@ class CardOut(BaseModel):
     clean_name: str
     set_id: Optional[str]
     set_code: Optional[str]
+    set_name: Optional[str] = None
+    set_card_count: Optional[int] = None
     card_number: Optional[str]
     rarity: Optional[str]
     card_type: Optional[str]
@@ -112,6 +114,12 @@ class PriceHistoryOut(BaseModel):
     fetched_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Settings ──────────────────────────────────────────────────────────────────
+
+class SettingUpdate(BaseModel):
+    value: str
 
 
 # ── Portfolio ─────────────────────────────────────────────────────────────────

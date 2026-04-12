@@ -6,6 +6,7 @@ from database import get_db
 from models import CollectionEntry, PriceCache, PriceHistory
 from schemas import PriceCacheOut, PriceHistoryOut
 from services.price_cache import get_price
+from routers.settings import get_pricing_mode
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
 
@@ -37,6 +38,10 @@ async def get_price_history(
 @router.post("/refresh", status_code=200)
 async def manual_refresh(session: AsyncSession = Depends(get_db)):
     """Force-refresh prices for all cards in the collection."""
+    pricing_mode = await get_pricing_mode(session)
+    if pricing_mode != "full":
+        return {"message": "Pricing is disabled in collection-only mode", "refreshed": 0, "skipped": 0, "total": 0}
+
     result = await session.execute(
         select(CollectionEntry.card_api_id).distinct()
     )
