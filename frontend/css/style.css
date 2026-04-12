@@ -719,7 +719,6 @@ textarea.input { resize: vertical; min-height: 64px; }
 }
 
 .poster-card:hover {
-  transform: scale(1.04);
   box-shadow: 0 16px 48px rgba(0,0,0,0.7);
   border-color: var(--accent);
   z-index: 10;
@@ -742,7 +741,7 @@ textarea.input { resize: vertical; min-height: 64px; }
 }
 
 .poster-card:hover img {
-  transform: scale(1.06);
+  transform: none;
 }
 
 /* Placeholder (no image) */
