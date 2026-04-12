@@ -459,6 +459,14 @@ AUTH_PASSWORD=yourpassword   # bcrypt hash also accepted
 JWT_SECRET_KEY=changeme      # any random string; rotate to invalidate all sessions
 ```
 
+**`docker-compose.yml` update:** The backend's `environment:` block explicitly names every variable forwarded into the container — variables in `.env` that aren't listed are silently dropped. Added `AUTH_USERNAME`, `AUTH_PASSWORD`, and `JWT_SECRET_KEY` with empty-string fallbacks:
+```yaml
+AUTH_USERNAME: ${AUTH_USERNAME:-}
+AUTH_PASSWORD: ${AUTH_PASSWORD:-}
+JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+```
+Without this, `GET /api/auth/status` returns `auth_enabled: false` even when the values are set in `.env`.
+
 ---
 
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
@@ -593,6 +601,9 @@ APScheduler's `AsyncIOScheduler` starts in FastAPI's `lifespan` context manager.
 | `SET_CACHE_TTL_DAYS` | Days before sets list is refreshed | `7` |
 | `PGADMIN_EMAIL` | pgAdmin login | `admin@localhost.com` |
 | `PGADMIN_PASSWORD` | pgAdmin password | change this |
+| `AUTH_USERNAME` | Login username — leave unset to disable auth entirely | — |
+| `AUTH_PASSWORD` | Login password (plaintext or bcrypt hash) | — |
+| `JWT_SECRET_KEY` | JWT signing secret — rotate to invalidate all sessions | — |
 
 ---
 

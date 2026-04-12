@@ -26,6 +26,9 @@ services:
       POKEWALLET_API_KEY: ${POKEWALLET_API_KEY}
       PRICE_CACHE_TTL_HOURS: ${PRICE_CACHE_TTL_HOURS:-24}
       SET_CACHE_TTL_DAYS: ${SET_CACHE_TTL_DAYS:-7}
+      AUTH_USERNAME: ${AUTH_USERNAME:-}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
     depends_on:
       db:
         condition: service_healthy

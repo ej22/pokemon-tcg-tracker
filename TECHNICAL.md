@@ -78,6 +78,8 @@ open http://localhost:3003
 | `AUTH_PASSWORD`         | Login password (plaintext or bcrypt hash)   | No       | —        |
 | `JWT_SECRET_KEY`        | Secret for signing JWTs. Rotate to invalidate all sessions | No | — |
 
+> **Note:** `docker-compose.yml` passes env vars to the backend via an explicit `environment:` block — variables present in `.env` but not listed there are silently ignored. `AUTH_USERNAME`, `AUTH_PASSWORD`, and `JWT_SECRET_KEY` are all wired up with empty-string fallbacks (`${AUTH_USERNAME:-}`) so omitting them disables auth cleanly.
+
 ---
 
 ## API Endpoints
