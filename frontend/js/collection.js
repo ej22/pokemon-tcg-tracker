@@ -403,8 +403,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !cardViewOverlay.classList.contains('hidden')) closeCardView();
 });
 document.getElementById('card-view-edit-btn').addEventListener('click', () => {
+  const entry = _cardViewEntry;
   closeCardView();
-  openEditModal(_cardViewEntry);
+  openEditModal(entry);
 });
 
 // ── Tap-to-reveal actions (touch devices) ────────────────────────
