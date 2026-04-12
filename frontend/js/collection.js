@@ -105,7 +105,7 @@ function renderPosterCard(e, pricingOn) {
     <div class="poster-card" role="button" tabindex="0"
          aria-label="${e.card.name}"
          data-entry="${entryJson}"
-         onkeydown="if(event.key==='Enter')openEditModal(JSON.parse(this.dataset.entry))">
+         onkeydown="if(event.key==='Enter')openCardView(JSON.parse(this.dataset.entry))">
       ${imgContent}
 
       <div class="poster-badges">
@@ -286,7 +286,6 @@ const editForm       = document.getElementById('edit-card-form');
 const editModalClose = document.getElementById('edit-modal-close');
 
 function openEditModal(entry) {
-  document.querySelectorAll('.poster-card.tapped').forEach(c => c.classList.remove('tapped'));
   const f = editForm.elements;
   f.entry_id.value      = entry.id;
   f.quantity.value       = entry.quantity;
@@ -330,8 +329,86 @@ editForm.addEventListener('submit', async e => {
 
 document.getElementById('btn-add-card').addEventListener('click', () => openAddModal());
 
+// ── Card View Overlay ────────────────────────────────────────────
+const cardViewOverlay = document.getElementById('card-view-overlay');
+let _cardViewEntry = null;
+
+function openCardView(entry) {
+  document.querySelectorAll('.poster-card.tapped').forEach(c => c.classList.remove('tapped'));
+  _cardViewEntry = entry;
+
+  document.getElementById('card-view-img').src = `/api/images/${entry.card.api_id}`;
+  document.getElementById('card-view-img').alt = entry.card.name;
+  document.getElementById('card-view-name').textContent = entry.card.name;
+
+  const setMeta = [entry.card.set_name || entry.card.set_code, entry.card.card_number]
+    .filter(Boolean).join(' · ');
+  document.getElementById('card-view-set').textContent = setMeta;
+
+  // Chips: condition, language, variant
+  const chips = [
+    conditionChip(entry.condition),
+    entry.language && entry.language !== 'English'
+      ? `<span class="chip chip-default">${entry.language}</span>` : '',
+    entry.variant
+      ? `<span class="chip chip-default">${entry.variant}</span>` : '',
+    entry.quantity > 1
+      ? `<span class="chip chip-default">×${entry.quantity}</span>` : '',
+    entry.card.source === 'pricecharting_scrape'
+      ? `<span class="chip chip-cm">PC</span>` : '',
+  ].filter(Boolean).join('');
+  document.getElementById('card-view-chips').innerHTML = chips;
+
+  // Price row
+  const pricingOn = window.appSettings?.pricing_mode !== 'collection_only';
+  const price = pricingOn ? bestPrice(entry.prices, entry.variant) : null;
+  const priceEl = document.getElementById('card-view-price-row');
+  if (price != null) {
+    priceEl.innerHTML = `<span class="card-view-price-label">Market price</span><span class="card-view-price-value">€${parseFloat(price).toFixed(2)}</span>`;
+    priceEl.classList.remove('hidden');
+  } else {
+    priceEl.classList.add('hidden');
+  }
+
+  // Purchase info
+  const purchaseEl = document.getElementById('card-view-purchase');
+  if (entry.purchase_price != null) {
+    const purchaseStr = `€${parseFloat(entry.purchase_price).toFixed(2)}`;
+    let pnl = '';
+    if (price != null) {
+      const diff = parseFloat(price) - parseFloat(entry.purchase_price);
+      const sign = diff >= 0 ? '+' : '';
+      const cls  = diff >= 0 ? 'card-view-pnl-pos' : 'card-view-pnl-neg';
+      pnl = `<span class="${cls}">${sign}€${diff.toFixed(2)}</span>`;
+    }
+    purchaseEl.innerHTML = `<span class="card-view-price-label">Purchased for</span><span class="card-view-price-value">${purchaseStr} ${pnl}</span>`;
+    purchaseEl.classList.remove('hidden');
+  } else {
+    purchaseEl.classList.add('hidden');
+  }
+
+  cardViewOverlay.classList.remove('hidden');
+}
+
+function closeCardView() {
+  cardViewOverlay.classList.add('hidden');
+  _cardViewEntry = null;
+}
+
+document.getElementById('card-view-close').addEventListener('click', closeCardView);
+cardViewOverlay.addEventListener('click', e => {
+  if (e.target === cardViewOverlay) closeCardView();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !cardViewOverlay.classList.contains('hidden')) closeCardView();
+});
+document.getElementById('card-view-edit-btn').addEventListener('click', () => {
+  closeCardView();
+  openEditModal(_cardViewEntry);
+});
+
 // ── Tap-to-reveal actions (touch devices) ────────────────────────
-// First tap: reveal edit/delete buttons. Second tap: open edit modal.
+// First tap: reveal edit/delete buttons. Second tap: open card view.
 collectionGrid.addEventListener('click', e => {
   const card = e.target.closest('.poster-card[data-entry]');
   if (!card) return;
@@ -343,5 +420,5 @@ collectionGrid.addEventListener('click', e => {
     }
     card.classList.remove('tapped');
   }
-  openEditModal(JSON.parse(card.dataset.entry));
+  openCardView(JSON.parse(card.dataset.entry));
 });

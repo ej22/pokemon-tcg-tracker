@@ -1146,6 +1146,168 @@ textarea.input { resize: vertical; min-height: 64px; }
   .modal-overlay { align-items: flex-end; padding: 0; }
 }
 
+/* ── Card View Overlay ────────────────────────────────────────── */
+.card-view-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fade-in 150ms var(--ease);
+}
+.card-view-overlay.hidden { display: none; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.card-view-panel {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  gap: 2.5rem;
+  align-items: flex-start;
+  max-width: 900px;
+  width: 100%;
+  animation: card-view-in 200ms var(--ease);
+}
+
+@keyframes card-view-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.card-view-close {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
+  z-index: 10;
+}
+.card-view-close svg { width: 1rem; height: 1rem; }
+.card-view-close:hover { color: var(--text); background: var(--bg-surface); }
+
+.card-view-image-wrap {
+  flex-shrink: 0;
+  width: 380px;
+  aspect-ratio: 3 / 4.2;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  background: var(--bg-raised);
+}
+.card-view-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.card-view-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.card-view-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.card-view-set {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+}
+
+.card-view-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.card-view-price-row,
+.card-view-purchase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  gap: 0.5rem;
+}
+
+.card-view-price-label {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.card-view-price-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-view-pnl-pos { color: var(--green); font-size: 0.75rem; }
+.card-view-pnl-neg { color: var(--red);   font-size: 0.75rem; }
+
+.card-view-actions {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+.card-view-edit-btn { width: 100%; justify-content: center; }
+
+/* Mobile: stack image above info */
+@media (max-width: 600px) {
+  .card-view-overlay { padding: 1rem; align-items: flex-end; }
+  .card-view-panel {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    max-height: 92dvh;
+    overflow-y: auto;
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 1.25rem 1.25rem 2rem;
+    width: 100%;
+    max-width: 100%;
+  }
+  .card-view-close { top: 0.75rem; right: 0.75rem; }
+  .card-view-image-wrap { width: 180px; }
+  .card-view-info { width: 100%; }
+}
+
+/* Tablet: scale down proportionally */
+@media (min-width: 601px) and (max-width: 1023px) {
+  .card-view-image-wrap { width: 280px; }
+  .card-view-panel { max-width: 680px; }
+}
+
 /* ── Reduced motion ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

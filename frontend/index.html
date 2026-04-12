@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=17" />
+  <link rel="stylesheet" href="css/style.css?v=19" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -420,6 +420,31 @@
   </div>
 </div>
 
+<!-- ── Card View Overlay ──────────────────────────────────────── -->
+<div id="card-view-overlay" class="card-view-overlay hidden" role="dialog" aria-modal="true" aria-label="Card detail">
+  <div class="card-view-panel">
+    <button class="card-view-close" id="card-view-close" aria-label="Close">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+    </button>
+    <div class="card-view-image-wrap">
+      <img id="card-view-img" src="" alt="" />
+    </div>
+    <div class="card-view-info">
+      <h2 class="card-view-name" id="card-view-name"></h2>
+      <p class="card-view-set" id="card-view-set"></p>
+      <div class="card-view-chips" id="card-view-chips"></div>
+      <div class="card-view-price-row" id="card-view-price-row"></div>
+      <div class="card-view-purchase" id="card-view-purchase"></div>
+      <div class="card-view-actions">
+        <button class="btn btn-primary card-view-edit-btn" id="card-view-edit-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+          Edit entry
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Settings Modal ─────────────────────────────────────────── -->
 <div id="settings-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Settings">
   <div class="modal">
@@ -517,10 +542,10 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=17"></script>
-<script src="js/collection.js?v=17"></script>
-<script src="js/search.js?v=17"></script>
-<script src="js/portfolio.js?v=17"></script>
-<script src="js/sets.js?v=17"></script>
+<script src="js/app.js?v=19"></script>
+<script src="js/collection.js?v=19"></script>
+<script src="js/search.js?v=19"></script>
+<script src="js/portfolio.js?v=19"></script>
+<script src="js/sets.js?v=19"></script>
 </body>
 </html>
