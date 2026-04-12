@@ -507,10 +507,13 @@ button { font-family: var(--font); }
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 600px;
-  max-height: 90dvh;
-  overflow-y: auto;
+  max-height: 90dvh; /* fallback */
+  max-height: 90svh; /* fixed at keyboard-open size; prevents modal jump */
+  overflow-y: hidden;
   box-shadow: var(--shadow-lg);
   animation: modal-in 200ms var(--ease);
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modal-in {
@@ -545,7 +548,7 @@ button { font-family: var(--font); }
 .modal-close:hover { color: var(--text); background: var(--bg-raised); }
 .modal-close svg { width: 16px; height: 16px; }
 
-.modal-body { padding: 1.25rem 1.5rem 1.5rem; }
+.modal-body { padding: 1.25rem 1.5rem 1.5rem; flex: 1; overflow-y: auto; min-height: 0; }
 
 /* ── Forms ────────────────────────────────────────────────────── */
 .form-grid {
@@ -612,6 +615,11 @@ textarea.input { resize: vertical; min-height: 64px; }
   padding-top: 0.75rem;
   margin-top: 0.25rem;
   border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-surface);
+  padding-bottom: 0.75rem;
+  z-index: 1;
 }
 
 /* ── Search results ───────────────────────────────────────────── */
@@ -1141,7 +1149,7 @@ textarea.input { resize: vertical; min-height: 64px; }
   .page-header { flex-direction: column; align-items: flex-start; }
   .form-grid { grid-template-columns: 1fr; }
   .form-field.span-2, .form-field.span-3 { grid-column: span 1; }
-  .modal { border-radius: var(--radius) var(--radius) 0 0; max-height: 95dvh; }
+  .modal { border-radius: var(--radius) var(--radius) 0 0; max-height: 95dvh; max-height: 95svh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
 }
 
