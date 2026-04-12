@@ -305,6 +305,42 @@ POST /api/cards/manual {"url":"https://www.pricecharting.com/game/pokemon-promo/
 
 ---
 
+### Phase 17 — Card view lightbox
+
+**Motivation:** Clicking a collection card previously opened the edit modal directly, giving no way to just look at a card without accidentally editing it. Feature requested by @Awesmoe on GitHub.
+
+**Lightbox overlay (`#card-view-overlay`):**
+- Full-screen overlay (`position: fixed; inset: 0`) with a centred panel (`.card-view-panel`, max-width 900px).
+- Desktop: side-by-side layout — artwork left (`.card-view-image-wrap`, up to 380px wide), info panel right.
+- Mobile/tablet: portrait-stacked — artwork on top (280px / 180px resp.), info below with vertical scroll.
+- Info panel shows: card name, set name + set code chip, card number, condition chip, quantity, price row (best price + variant), purchase info and P&L summary (full pricing mode only).
+- "Edit entry" button at the bottom opens the edit modal.
+
+**Tap/click flow change:**
+- Collection poster cards now call `openCardView(entry)` (not `openEditModal`) on both click and keyboard enter.
+- `.tapped` class management moved from `openEditModal` to `openCardView`.
+- Edit from lightbox: `const entry = _cardViewEntry; closeCardView(); openEditModal(entry);` — entry captured into a local before `closeCardView()` nulls `_cardViewEntry`.
+
+**Hover zoom removed:**
+- `.poster-card:hover { transform: scale(1.04) }` and `.poster-card:hover img { transform: scale(1.06) }` removed. Both caused card art to be clipped by `overflow: hidden` at the card edges.
+
+---
+
+### Phase 18 — Mobile edit modal stabilisation
+
+**Problem:** On mobile, opening the edit modal and then tapping an input field raised the soft keyboard. The modal used `max-height: 90dvh` (dynamic viewport height), which shrinks as the keyboard appears, causing the modal to visibly resize and the Save button to scroll off-screen or shift unpredictably.
+
+**Root cause:** `dvh` tracks the *current* viewport height and changes in real time as the keyboard opens/closes. `svh` (small viewport height) is fixed at the minimum size the viewport can reach (i.e., with the keyboard open) and never changes during a keyboard event.
+
+**CSS changes (`frontend/css/style.css`):**
+- `.modal`: `max-height` changed from `90dvh` to `90svh` (with `dvh` as a fallback for browsers without `svh` support, placed first in the cascade so `svh` wins).
+- `.modal`: `overflow-y: hidden` (scroll is now delegated to the body, not the modal container). `display: flex; flex-direction: column` so the body can grow and the actions stay at the bottom.
+- `.modal-body`: added `flex: 1; overflow-y: auto; min-height: 0` — grows to fill available height and scrolls independently.
+- `.form-actions`: added `position: sticky; bottom: 0; background: var(--bg-surface); padding-bottom: 0.75rem; z-index: 1` — Save button stays pinned at the bottom of the visible modal, always reachable.
+- Mobile breakpoint `@media (max-width: 600px)`: updated from `max-height: 95dvh` to `max-height: 95dvh; max-height: 95svh`.
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:

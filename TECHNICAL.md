@@ -137,7 +137,9 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}` with `Cache-Control: public, max-age=86400`. Set logos via `GET /api/sets/{code}/image` with 7-day cache.
 
-**Mobile layout** — Sidebar on desktop (>1023px). Compact topbar on tablets (601–1023px). Fixed bottom nav on phones (≤600px). Touch targets 44px minimum. iOS safe-area inset handled on bottom nav.
+**Card view lightbox** — Clicking a card in the collection opens a full-screen overlay (`#card-view-overlay`) showing the card artwork at a larger scale alongside card metadata (name, set, number, condition, quantity), a price row, and a purchase/P&L summary. An "Edit entry" button in the panel opens the edit modal. On mobile the panel is portrait-stacked; on desktop it is a side-by-side panel (max-width 900px) with the artwork up to 380px wide. Idea credited to @Awesmoe on GitHub. Hover zoom scaling was removed at the same time to prevent card art being clipped at the edges.
+
+**Mobile layout** — Sidebar on desktop (>1023px). Compact topbar on tablets (601–1023px). Fixed bottom nav on phones (≤600px). Touch targets 44px minimum. iOS safe-area inset handled on bottom nav. The edit modal uses `svh` (small viewport height) so it does not resize when the soft keyboard opens; the form body scrolls independently and the Save button is `position: sticky; bottom: 0` so it remains reachable without scrolling.
 
 ---
 
