@@ -23,7 +23,8 @@ backend/
   schemas.py                  Pydantic request/response models
   scheduler.py                APScheduler jobs (nightly 02:00 price refresh, Sunday 03:00 sets refresh)
   routers/
-    collection.py             CRUD for user's collection
+    auth.py                   POST /api/auth/login, GET /api/auth/status, GET /api/auth/logout
+    collection.py             CRUD for user's collection + POST /bulk-missing
     prices.py                 Price fetch + history + manual refresh
     sets.py                   Sets list (weekly-cached) + set cards
     portfolio.py              Portfolio value aggregation
@@ -32,6 +33,7 @@ backend/
     images.py                 Card artwork proxy
     manual_cards.py           POST /api/cards/manual — scrape by PriceCharting URL
   services/
+    auth.py                   JWT creation/validation + require_auth() dependency
     pokewallet.py             All PokéWallet HTTP calls + _normalise_card() + extract_cardmarket_prices()
     price_cache.py            Cache TTL logic; get_price() is the single entry point for price data
     pricecharting_scraper.py  PriceCharting HTML scraper (curl_cffi + selectolax)
@@ -72,31 +74,40 @@ open http://localhost:3003
 | `SET_CACHE_TTL_DAYS`    | Days before the sets list is refreshed      | No       | `7`      |
 | `PGADMIN_EMAIL`         | pgAdmin login email                         | Yes      | —        |
 | `PGADMIN_PASSWORD`      | pgAdmin login password                      | Yes      | —        |
+| `AUTH_USERNAME`         | Login username. Leave unset to disable auth | No       | —        |
+| `AUTH_PASSWORD`         | Login password (plaintext or bcrypt hash)   | No       | —        |
+| `JWT_SECRET_KEY`        | Secret for signing JWTs. Rotate to invalidate all sessions | No | — |
 
 ---
 
 ## API Endpoints
 
-| Method | Path                                | Description                                   |
-|--------|-------------------------------------|-----------------------------------------------|
-| GET    | `/api/collection`                   | List all collection entries with prices and set metadata |
-| POST   | `/api/collection`                   | Add a card to the collection                  |
-| PUT    | `/api/collection/{id}`              | Update a collection entry                     |
-| DELETE | `/api/collection/{id}`              | Remove a card from the collection             |
-| POST   | `/api/cards/manual`                 | Scrape and store a card from a PriceCharting URL |
-| GET    | `/api/search?q={query}`             | Search for cards via PokéWallet               |
-| GET    | `/api/sets`                         | List all cached sets                          |
-| GET    | `/api/sets/mine`                    | List only sets the user has tracked cards in  |
-| GET    | `/api/sets/{set_id}/cards`          | List cards in a set                           |
-| GET    | `/api/sets/{set_code}/image`        | Proxy set logo artwork from PokéWallet        |
-| GET    | `/api/prices/{card_api_id}`         | Get latest cached prices for a card           |
-| GET    | `/api/prices/{card_api_id}/history` | Full price history for a card                 |
-| POST   | `/api/prices/refresh`               | Force-refresh prices for all collection cards |
-| GET    | `/api/portfolio/summary`            | Portfolio value summary                       |
-| GET    | `/api/images/{card_api_id}`         | Proxy card artwork from PokéWallet (browser-cacheable) |
-| GET    | `/api/settings`                     | Get all app settings as a key→value dict      |
-| PUT    | `/api/settings/{key}`               | Update a setting value                        |
-| GET    | `/api/health`                       | Health check                                  |
+| Method | Path                                | Auth required? | Description                                   |
+|--------|-------------------------------------|----------------|-----------------------------------------------|
+| GET    | `/api/collection`                   | No  | List all collection entries with prices and set metadata. `?for_trade=true` filters to trade-binder entries. |
+| POST   | `/api/collection`                   | Yes | Add a card to the collection                  |
+| PUT    | `/api/collection/{id}`              | Yes | Update a collection entry                     |
+| DELETE | `/api/collection/{id}`              | Yes | Remove a card from the collection             |
+| POST   | `/api/collection/bulk-missing`      | Yes | Insert qty=0 placeholders for all uncollected cards in a set (`{set_id}`) |
+| POST   | `/api/cards/manual`                 | No  | Scrape and store a card from a PriceCharting URL |
+| GET    | `/api/search?q={query}`             | No  | Search for cards via PokéWallet               |
+| GET    | `/api/sets`                         | No  | List all cached sets                          |
+| GET    | `/api/sets/mine`                    | No  | List only sets the user has tracked cards in  |
+| GET    | `/api/sets/{set_id}/cards`          | No  | List cards in a set                           |
+| GET    | `/api/sets/{set_code}/image`        | No  | Proxy set logo artwork from PokéWallet        |
+| GET    | `/api/prices/{card_api_id}`         | No  | Get latest cached prices for a card           |
+| GET    | `/api/prices/{card_api_id}/history` | No  | Full price history for a card                 |
+| POST   | `/api/prices/refresh`               | Yes | Force-refresh prices for all collection cards |
+| GET    | `/api/portfolio/summary`            | No  | Portfolio value summary                       |
+| GET    | `/api/images/{card_api_id}`         | No  | Proxy card artwork from PokéWallet (browser-cacheable) |
+| GET    | `/api/settings`                     | No  | Get all app settings as a key→value dict      |
+| PUT    | `/api/settings/{key}`               | Yes | Update a setting value                        |
+| POST   | `/api/auth/login`                   | —   | Authenticate with username+password; returns JWT |
+| GET    | `/api/auth/status`                  | —   | Returns `{auth_enabled, authenticated}`       |
+| GET    | `/api/auth/logout`                  | —   | Informational (JWT is stateless; client deletes token) |
+| GET    | `/api/health`                       | No  | Health check                                  |
+
+"Auth required" applies only when `AUTH_USERNAME` is set in the environment. When unset, all endpoints are open and the auth UI is hidden entirely.
 
 Full interactive docs: `http://localhost:8014/docs`
 
@@ -118,6 +129,23 @@ The frontend stores one additional preference in `localStorage` (not the databas
 |-----|--------|---------|--------|
 | `collectionViewMode` | `flat`, `grouped` | `flat` | Flat poster grid vs grouped-by-set |
 | `groupedLayout` | `horizontal`, `grid` | `horizontal` | Horizontal scroll rows vs wrapping grid within set sections |
+| `showMissingCards` | `true`, `false` | `true` | Whether qty=0 placeholder cards are visible in the collection |
+
+### Collection entry fields
+
+Each collection entry (`CollectionEntry`) has the following boolean flags in addition to the standard fields:
+
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `track_price` | `false` | Opt-in price tracking for this card in collection-only mode |
+| `for_trade` | `false` | Card is listed in the Trade Binder; always has pricing enabled |
+| `quantity = 0` | — | Missing/wanted placeholder; excluded from portfolio totals and sidebar count |
+
+Price-fetching logic at a glance:
+- `quantity = 0` → never fetch
+- `for_trade = true` → always fetch (regardless of `pricing_mode`)
+- `track_price = true` + `pricing_mode = collection_only` → fetch
+- `pricing_mode = full` → always fetch
 
 ---
 
@@ -133,7 +161,13 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Portfolio view** — KPI summary (estimated value, total cards, unique cards, priced count) and a Chart.js line chart of portfolio value over time, plus a value-by-set breakdown table. Hidden in collection-only mode with a prompt to enable pricing.
 
-**Sets view** — Landscape poster grid of sets the user has cards in. Clicking a set loads its cards as a portrait poster grid with an Add to Collection button on hover.
+**Sets view** — Landscape poster grid of sets the user has cards in. Clicking a set loads its cards as a portrait poster grid with an Add to Collection button on hover. A "Track all missing" button inserts qty=0 placeholders for every uncollected card in the set.
+
+**Trade Binder view** — Filtered collection view showing only cards marked `for_trade=true`. Always shows CardMarket prices regardless of `pricing_mode`. Summary bar displays card count and total estimated value. Cards can be removed from the binder via the trade toggle button.
+
+**Missing cards** — Qty=0 placeholder entries render with a grayscale image and a "Missing" badge. They are hidden from the sidebar card count but shown in a separate "Missing" stat row. A "Show/Hide missing" toggle in the collection page header controls visibility (state persisted in `localStorage`).
+
+**Authentication** — When `AUTH_USERNAME` is set in the environment, a login modal appears the first time any write action is attempted. Subsequent requests in the same session use a JWT stored in `localStorage`. The sidebar shows the logged-in username and a sign-out button. When `AUTH_USERNAME` is not set, the auth UI is completely hidden and all endpoints are open (backward-compatible default).
 
 **Image proxy** — Card artwork is served via `GET /api/images/{card_api_id}` with `Cache-Control: public, max-age=86400`. Set logos via `GET /api/sets/{code}/image` with 7-day cache.
 
@@ -187,7 +221,7 @@ Collection badges: **PC** for PriceCharting-sourced cards; **Stale** if price da
 
 | Job                    | Schedule           | What it does                                                      |
 |------------------------|--------------------|-------------------------------------------------------------------|
-| Nightly price refresh  | Every day at 02:00 | Refreshes PokéWallet prices then re-scrapes PriceCharting cards. Skipped entirely in collection-only mode. |
+| Nightly price refresh  | Every day at 02:00 | Refreshes PokéWallet prices then re-scrapes PriceCharting cards. In collection-only mode, refreshes only entries with `track_price=true` or `for_trade=true` (qty > 0); skips entirely if none exist. |
 | Weekly sets refresh    | Sundays at 03:00   | Re-fetches the full sets list from PokéWallet                     |
 | Hourly counter reset   | Every hour :00     | Resets the hourly API call counter                                |
 | Daily counter reset    | Every day at 00:00 | Resets the daily API call counter                                 |
@@ -305,7 +339,7 @@ IDs are hex hashes prefixed with `pk_`. Always use the full string as the primar
 
 - **Sets browser on first boot:** `GET /api/sets` triggers a fetch of all sets (~763). Takes a few seconds; cached for 7 days after that.
 - **Rate limit counters are in-memory** — restart resets them. Low risk in practice.
-- **No authentication** — intended for a private server. Do not expose to the public internet.
+- **Authentication is optional** — disabled by default (omit `AUTH_USERNAME`). When enabled, JWT tokens are stored in `localStorage`; rotating `JWT_SECRET_KEY` invalidates all active sessions. Suitable for self-hosting; still not recommended to expose directly to the public internet without a reverse proxy with TLS.
 - **PriceCharting scraping** — currently reliable, but could break if PriceCharting adds bot protection. On failure, the last cached price is retained and a Stale badge appears.
 - **PriceCharting prices are USD** — converted at fetch time. Fallback rate `0.92` used if Frankfurter is unreachable.
 - **Portfolio chart requires 2+ days** of price history before it renders.

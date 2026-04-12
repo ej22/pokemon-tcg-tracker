@@ -12,21 +12,25 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 @router.get("/summary", response_model=PortfolioSummary)
 async def portfolio_summary(session: AsyncSession = Depends(get_db)):
-    # Total cards (sum of quantity)
+    # Total cards (sum of quantity) — exclude zero-quantity placeholders
     qty_result = await session.execute(
-        select(func.sum(CollectionEntry.quantity))
+        select(func.sum(CollectionEntry.quantity)).where(CollectionEntry.quantity > 0)
     )
     total_cards = qty_result.scalar() or 0
 
-    # Unique cards
+    # Unique cards (only owned entries)
     unique_result = await session.execute(
-        select(func.count(CollectionEntry.card_api_id.distinct()))
+        select(func.count(CollectionEntry.card_api_id.distinct())).where(
+            CollectionEntry.quantity > 0
+        )
     )
     total_unique = unique_result.scalar() or 0
 
-    # All collection entries with card info
+    # All collection entries with card info — exclude zero-quantity placeholders
     entries_result = await session.execute(
-        select(CollectionEntry).order_by(CollectionEntry.card_api_id)
+        select(CollectionEntry)
+        .where(CollectionEntry.quantity > 0)
+        .order_by(CollectionEntry.card_api_id)
     )
     entries = entries_result.scalars().all()
 

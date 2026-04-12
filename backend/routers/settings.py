@@ -1,9 +1,12 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import AppSetting
 from schemas import SettingUpdate
+from services.auth import require_auth
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -32,6 +35,7 @@ async def update_setting(
     key: str,
     body: SettingUpdate,
     session: AsyncSession = Depends(get_db),
+    _: Optional[str] = Depends(require_auth),
 ):
     """Update a setting by key. Validates known keys."""
     if key in _VALID_VALUES and body.value not in _VALID_VALUES[key]:

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine
 from models import Base
-from routers import collection, prices, sets, portfolio, search, images, manual_cards, settings
+from routers import collection, prices, sets, portfolio, search, images, manual_cards, settings, auth
 from scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(
@@ -42,6 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(collection.router)
 app.include_router(prices.router)
 app.include_router(sets.router)

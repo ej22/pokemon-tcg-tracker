@@ -19,29 +19,50 @@ _SCRAPE_NIGHT_CAP = 60
 
 
 async def nightly_price_refresh() -> None:
-    """Refresh prices for all cards in the collection. Runs at 02:00 daily."""
-    from sqlalchemy import select
+    """Refresh prices for all cards in the collection. Runs at 02:00 daily.
+
+    In full mode: refresh every card.
+    In collection_only mode: refresh only entries where track_price=True or for_trade=True.
+    """
+    from sqlalchemy import select, or_
     from models import CollectionEntry, Card
     from routers.settings import get_pricing_mode
 
     async with AsyncSessionLocal() as session:
         pricing_mode = await get_pricing_mode(session)
+
     if pricing_mode != "full":
-        logger.info("Nightly price refresh skipped — pricing is disabled (collection-only mode)")
-        return
+        # Collection-only: only refresh explicitly tracked cards
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(CollectionEntry.card_api_id).distinct().where(
+                    or_(CollectionEntry.track_price == True, CollectionEntry.for_trade == True),
+                    CollectionEntry.quantity > 0,
+                )
+            )
+            all_ids = [row[0] for row in result.fetchall()]
 
-    logger.info("Nightly price refresh starting")
-
-    # ── Phase 1: PokéWallet cards ────────────────────────────────────
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(CollectionEntry.card_api_id).distinct()
+        if not all_ids:
+            logger.info(
+                "Nightly price refresh skipped — no price-tracked cards in collection-only mode"
+            )
+            return
+        logger.info(
+            "Collection-only mode: refreshing %d price-tracked card(s)", len(all_ids)
         )
-        all_ids = [row[0] for row in result.fetchall()]
+    else:
+        logger.info("Nightly price refresh starting")
 
-    if not all_ids:
-        logger.info("No cards in collection — skipping price refresh")
-        return
+        # Full mode: refresh every card in the collection
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(CollectionEntry.card_api_id).distinct()
+            )
+            all_ids = [row[0] for row in result.fetchall()]
+
+        if not all_ids:
+            logger.info("No cards in collection — skipping price refresh")
+            return
 
     # Split into PokéWallet vs PriceCharting-scraped
     pw_ids: list[str] = []

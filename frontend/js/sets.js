@@ -8,6 +8,9 @@ const setDetailTitle  = document.getElementById('set-detail-title');
 const setCardsLoading = document.getElementById('set-cards-loading');
 const setCardsGrid    = document.getElementById('set-cards-grid');
 const btnBackSets     = document.getElementById('btn-back-sets');
+const btnBulkMissing  = document.getElementById('btn-bulk-missing');
+
+let _currentSet = null;
 
 async function loadSets() {
   setsLoading.classList.remove('hidden');
@@ -69,6 +72,7 @@ function renderSetsGrid(sets) {
 }
 
 async function openSetDetail(set) {
+  _currentSet = set;
   setsGrid.classList.add('hidden');
   setDetail.classList.remove('hidden');
   setDetailTitle.textContent = `${set.name}${set.set_code ? ` (${set.set_code})` : ''}`;
@@ -76,6 +80,9 @@ async function openSetDetail(set) {
     `<div class="poster-skeleton skeleton"></div>`
   ).join('');
   setCardsLoading.classList.add('hidden');
+
+  // Show the "Track all missing" button for this set
+  if (btnBulkMissing) btnBulkMissing.classList.remove('hidden');
 
   try {
     const cards = await apiFetch(`/sets/${set.set_id}/cards`);
@@ -127,7 +134,10 @@ function renderSetCards(cards) {
   }).join('');
 }
 
-function addCardFromSet(card) {
+async function addCardFromSet(card) {
+  try {
+    await requireAuth();
+  } catch (_) { return; }
   pickCard({
     api_id:      card.api_id,
     name:        card.name,
@@ -142,7 +152,31 @@ function addCardFromSet(card) {
 btnBackSets.addEventListener('click', () => {
   setDetail.classList.add('hidden');
   setsGrid.classList.remove('hidden');
+  if (btnBulkMissing) btnBulkMissing.classList.add('hidden');
+  _currentSet = null;
 });
+
+if (btnBulkMissing) {
+  btnBulkMissing.addEventListener('click', async () => {
+    if (!_currentSet) return;
+    try {
+      await requireAuth();
+      const data = await apiFetch('/collection/bulk-missing', {
+        method: 'POST',
+        body: JSON.stringify({ set_id: _currentSet.set_id }),
+      });
+      if (data.added === 0) {
+        toast('All cards in this set are already tracked');
+      } else {
+        toast(`Added ${data.added} missing card${data.added === 1 ? '' : 's'} as placeholders`);
+        // Reload collection so sidebar stats update
+        if (typeof loadCollection === 'function') loadCollection();
+      }
+    } catch (e) {
+      if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
+    }
+  });
+}
 
 // ── Tap-to-reveal Add button on set cards (touch devices) ────────
 setCardsGrid.addEventListener('click', e => {

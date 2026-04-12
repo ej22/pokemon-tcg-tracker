@@ -5,13 +5,13 @@ const collectionEmpty = document.getElementById('collection-empty');
 
 // ── View mode (flat grid vs grouped by set) ──────────────────────
 let collectionViewMode = localStorage.getItem('collectionViewMode') || 'flat';
+let showMissingCards   = localStorage.getItem('showMissingCards') !== 'false';
 
 function setCollectionViewMode(mode) {
   collectionViewMode = mode;
   localStorage.setItem('collectionViewMode', mode);
   const iconGrouped = document.getElementById('view-icon-grouped');
   const iconGrid    = document.getElementById('view-icon-grid');
-  // When grouped mode is active, show the grid icon (to switch back)
   if (iconGrouped && iconGrid) {
     iconGrouped.classList.toggle('hidden', mode === 'grouped');
     iconGrid.classList.toggle('hidden', mode === 'flat');
@@ -20,18 +20,33 @@ function setCollectionViewMode(mode) {
   if (btn) btn.classList.toggle('active', mode === 'grouped');
 }
 
-// Initialise toggle button state
+function applyMissingFilter() {
+  collectionGrid.querySelectorAll('.poster-card--missing').forEach(el => {
+    el.style.display = showMissingCards ? '' : 'none';
+  });
+  const btn = document.getElementById('btn-toggle-missing');
+  if (btn) btn.classList.toggle('missing-hidden', !showMissingCards);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setCollectionViewMode(collectionViewMode);
   document.getElementById('btn-toggle-view').addEventListener('click', () => {
     setCollectionViewMode(collectionViewMode === 'flat' ? 'grouped' : 'flat');
     loadCollection();
   });
+
+  const btnMissing = document.getElementById('btn-toggle-missing');
+  if (btnMissing) {
+    btnMissing.addEventListener('click', () => {
+      showMissingCards = !showMissingCards;
+      localStorage.setItem('showMissingCards', showMissingCards);
+      applyMissingFilter();
+    });
+  }
 });
 
 async function loadCollection() {
   showSkeletonCards();
-
   try {
     const entries = await apiFetch('/collection');
     renderCollection(entries);
@@ -56,7 +71,6 @@ function conditionChip(cond) {
 
 function bestPrice(prices, variant) {
   if (!prices || !prices.length) return null;
-  // Accept PokéWallet CardMarket prices and PriceCharting-scraped prices
   const cm = prices.filter(p => p.source === 'cardmarket' || p.source === 'pricecharting_scrape');
   if (!cm.length) return null;
   const matched = variant ? cm.find(p => p.variant_type === variant) : null;
@@ -75,12 +89,22 @@ function isPriceStale(prices, ttlHours = 48) {
   });
 }
 
-function renderPosterCard(e, pricingOn) {
-  const price     = pricingOn ? bestPrice(e.prices, e.variant) : null;
-  const priceStr  = price != null ? `€${parseFloat(price).toFixed(2)}` : null;
-  const imageUrl  = `/api/images/${e.card.api_id}`;
-  const entryJson = JSON.stringify(e).replace(/"/g, '&quot;');
-  const qty       = e.quantity > 1 ? `<span class="poster-qty-badge">×${e.quantity}</span>` : '';
+// Determine whether to show pricing for a given entry
+function entryPricingOn(e) {
+  const mode = window.appSettings?.pricing_mode;
+  if (mode !== 'collection_only') return true;
+  // In collection_only mode, show pricing when explicitly enabled
+  return e.track_price === true || e.for_trade === true;
+}
+
+function renderPosterCard(e) {
+  const isMissing  = e.quantity === 0;
+  const pricingOn  = !isMissing && entryPricingOn(e);
+  const price      = pricingOn ? bestPrice(e.prices, e.variant) : null;
+  const priceStr   = price != null ? `€${parseFloat(price).toFixed(2)}` : null;
+  const imageUrl   = `/api/images/${e.card.api_id}`;
+  const entryJson  = JSON.stringify(e).replace(/"/g, '&quot;');
+  const qty        = e.quantity > 1 ? `<span class="poster-qty-badge">×${e.quantity}</span>` : '';
 
   let pnlDot = '';
   if (pricingOn && e.purchase_price != null && price != null) {
@@ -90,34 +114,58 @@ function renderPosterCard(e, pricingOn) {
       : `<span class="poster-pnl-dot pnl-neg" title="€${diff.toFixed(2)}"></span>`;
   }
 
-  const imgContent = `<img src="${imageUrl}" alt="${e.card.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`;
-
   const isScraped  = e.card.source === 'pricecharting_scrape';
   const isStale    = pricingOn && isScraped && isPriceStale(e.prices);
   const pcBadge    = (pricingOn && isScraped) ? `<span class="chip chip-cm" title="Price from PriceCharting (USD→EUR)">PC</span>` : '';
   const staleBadge = isStale ? `<span class="chip chip-stale" title="Price may be outdated">Stale</span>` : '';
+  const tradeBadge = e.for_trade ? `<span class="chip chip-trade" title="In Trade Binder">TRADE</span>` : '';
 
   const priceRow = pricingOn
     ? `<span class="poster-price-row">${pnlDot}${priceStr ? `<span class="poster-price">${priceStr}</span>` : '<span class="poster-no-price">—</span>'}</span>`
     : '';
 
+  const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
+
+  // Track price button — shown in collection_only mode (unless for_trade, which already implies tracking)
+  const trackBtn = isCollOnly && !e.for_trade ? `
+    <button class="poster-action-btn poster-action-track${e.track_price ? ' active' : ''}"
+      title="${e.track_price ? 'Stop tracking price' : 'Track price'}"
+      onclick="toggleTrackPrice(event, ${e.id}, ${e.track_price})">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.601a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
+    </button>` : '';
+
+  // Trade button — always visible
+  const tradeBtn = `
+    <button class="poster-action-btn poster-action-trade${e.for_trade ? ' active' : ''}"
+      title="${e.for_trade ? 'Remove from Trade Binder' : 'Add to Trade Binder'}"
+      onclick="toggleForTrade(event, ${e.id}, ${e.for_trade})">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+    </button>`;
+
+  const missingBadge = isMissing ? `<span class="poster-missing-badge">Missing</span>` : '';
+  const cardClasses  = ['poster-card', isMissing ? 'poster-card--missing' : ''].filter(Boolean).join(' ');
+
   return `
-    <div class="poster-card" role="button" tabindex="0"
+    <div class="${cardClasses}" role="button" tabindex="0"
          aria-label="${e.card.name}"
          data-entry="${entryJson}"
          onkeydown="if(event.key==='Enter')openCardView(JSON.parse(this.dataset.entry))">
-      ${imgContent}
+      <img src="${imageUrl}" alt="${e.card.name}" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin',cardPlaceholder())">
+      ${missingBadge}
 
       <div class="poster-badges">
-        ${conditionChip(e.condition)}
+        ${isMissing ? '' : conditionChip(e.condition)}
         ${qty}
         ${pcBadge}
         ${staleBadge}
+        ${tradeBadge}
       </div>
 
       <div class="poster-actions" onclick="event.stopPropagation()">
+        ${trackBtn}
+        ${tradeBtn}
         <button class="poster-action-btn poster-action-edit" title="Edit"
-          onclick="openEditModal(${entryJson})">
+          onclick="openEditModal(JSON.parse(this.closest('[data-entry]').dataset.entry))">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
         </button>
         <button class="poster-action-btn poster-action-delete" title="Remove"
@@ -138,53 +186,78 @@ function renderPosterCard(e, pricingOn) {
 
 function renderCollection(entries) {
   const subtitle = document.getElementById('collection-subtitle');
+
+  // Separate owned from missing (qty=0)
+  const owned   = entries.filter(e => e.quantity > 0);
+  const missing = entries.filter(e => e.quantity === 0);
+
   if (subtitle) {
-    subtitle.textContent = entries.length
-      ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`
-      : 'No cards yet';
+    if (entries.length === 0) {
+      subtitle.textContent = 'No cards yet';
+    } else {
+      const parts = [`${owned.length} entr${owned.length === 1 ? 'y' : 'ies'}`];
+      if (missing.length) parts.push(`${missing.length} missing`);
+      subtitle.textContent = parts.join(' · ');
+    }
   }
 
   if (!entries.length) {
     collectionGrid.innerHTML = '';
     collectionGrid.classList.add('hidden');
     collectionEmpty.classList.remove('hidden');
-    updateSidebarStats(0, null);
+    updateSidebarStats(0, null, 0);
     return;
   }
 
   collectionEmpty.classList.add('hidden');
   collectionGrid.classList.remove('hidden');
 
-  const pricingOn = window.appSettings?.pricing_mode !== 'collection_only';
+  // Show/hide the missing toggle button
+  const btnMissing = document.getElementById('btn-toggle-missing');
+  if (btnMissing) btnMissing.classList.toggle('hidden', missing.length === 0);
 
   if (collectionViewMode === 'grouped') {
     collectionGrid.classList.remove('card-grid');
     collectionGrid.classList.add('set-group-stack');
-    renderCollectionGrouped(entries, pricingOn);
+    renderCollectionGrouped(entries);
   } else {
     collectionGrid.classList.remove('set-group-stack');
     collectionGrid.classList.add('card-grid');
-    renderCollectionFlat(entries, pricingOn);
+    renderCollectionFlat(entries);
   }
 }
 
-function renderCollectionFlat(entries, pricingOn) {
+function renderCollectionFlat(entries) {
+  const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
   let totalValue = 0;
   let totalCards = 0;
+  let missingCount = 0;
 
   collectionGrid.innerHTML = entries.map(e => {
-    const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
-    if (price != null) totalValue += parseFloat(price) * (e.quantity || 1);
-    totalCards += (e.quantity || 1);
-    return renderPosterCard(e, pricingOn);
+    if (e.quantity === 0) {
+      missingCount++;
+    } else {
+      const pricingOn = entryPricingOn(e);
+      const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
+      if (price != null) totalValue += parseFloat(price) * e.quantity;
+      totalCards += e.quantity;
+    }
+    return renderPosterCard(e);
   }).join('');
 
-  updateSidebarStats(totalCards, (pricingOn && totalValue > 0) ? totalValue : null);
+  const showValue = !isCollOnly && totalValue > 0
+    ? totalValue
+    : (isCollOnly && totalValue > 0 ? totalValue : null);
+
+  updateSidebarStats(totalCards, showValue, missingCount);
+  applyMissingFilter();
 }
 
-function renderCollectionGrouped(entries, pricingOn) {
+function renderCollectionGrouped(entries) {
+  const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
   let totalValue = 0;
   let totalCards = 0;
+  let totalMissing = 0;
 
   // Group by set_id
   const groups = new Map();
@@ -192,9 +265,9 @@ function renderCollectionGrouped(entries, pricingOn) {
     const key = e.card.set_id || '__other__';
     if (!groups.has(key)) {
       groups.set(key, {
-        setName: e.card.set_name || (e.card.set_code ? e.card.set_code : 'Other'),
+        setName:      e.card.set_name || (e.card.set_code ? e.card.set_code : 'Other'),
         setCardCount: e.card.set_card_count || 0,
-        entries: [],
+        entries:      [],
       });
     }
     groups.get(key).entries.push(e);
@@ -207,30 +280,45 @@ function renderCollectionGrouped(entries, pricingOn) {
 
   const htmlParts = sorted.map(([setId, group]) => {
     let groupValue = 0;
-    let groupCards = 0;
 
     const cardsHtml = group.entries.map(e => {
-      const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
-      if (price != null) groupValue += parseFloat(price) * (e.quantity || 1);
-      totalValue += pricingOn && price != null ? parseFloat(price) * (e.quantity || 1) : 0;
-      groupCards += (e.quantity || 1);
-      totalCards += (e.quantity || 1);
-      return renderPosterCard(e, pricingOn);
+      if (e.quantity > 0) {
+        const pricingOn = entryPricingOn(e);
+        const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
+        if (price != null) {
+          groupValue += parseFloat(price) * e.quantity;
+          totalValue += parseFloat(price) * e.quantity;
+        }
+        totalCards += e.quantity;
+      } else {
+        totalMissing++;
+      }
+      return renderPosterCard(e);
     }).join('');
 
-    const ownedCount = group.entries.reduce((s, e) => s + (e.quantity || 1), 0);
-    const totalInSet = group.setCardCount;
-    const countLabel = totalInSet > 0
-      ? `${ownedCount} / ${totalInSet} cards`
-      : `${ownedCount} card${ownedCount !== 1 ? 's' : ''}`;
+    const ownedCount   = group.entries.filter(e => e.quantity > 0).reduce((s, e) => s + e.quantity, 0);
+    const missingCount = group.entries.filter(e => e.quantity === 0).length;
+    const totalInSet   = group.setCardCount;
 
-    const valueLabel = (pricingOn && groupValue > 0)
+    let countLabel;
+    if (missingCount > 0 && totalInSet > 0) {
+      countLabel = `${ownedCount} owned · ${missingCount} missing / ${totalInSet} total`;
+    } else if (missingCount > 0) {
+      countLabel = `${ownedCount} owned · ${missingCount} missing`;
+    } else if (totalInSet > 0) {
+      countLabel = `${ownedCount} / ${totalInSet} cards`;
+    } else {
+      countLabel = `${ownedCount} card${ownedCount !== 1 ? 's' : ''}`;
+    }
+
+    const valueLabel = groupValue > 0
       ? `<span class="set-group-value">€${groupValue.toFixed(2)}</span>`
       : '';
 
     const layout = window.appSettings?.grouped_layout || 'horizontal';
     const bodyClass = layout === 'horizontal' ? 'set-group-body set-group-row' : 'set-group-body card-grid';
     const collapsed = localStorage.getItem(`setGroup_${setId}`) === 'collapsed';
+
     return `
       <div class="set-group${collapsed ? ' collapsed' : ''}" data-set-id="${setId}">
         <button class="set-group-header" aria-expanded="${!collapsed}">
@@ -246,7 +334,6 @@ function renderCollectionGrouped(entries, pricingOn) {
 
   collectionGrid.innerHTML = htmlParts.join('');
 
-  // Delegated collapse/expand handler
   collectionGrid.querySelectorAll('.set-group-header').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
@@ -262,21 +349,56 @@ function renderCollectionGrouped(entries, pricingOn) {
     });
   });
 
-  updateSidebarStats(totalCards, (pricingOn && totalValue > 0) ? totalValue : null);
+  const showValue = totalValue > 0 ? totalValue : null;
+  updateSidebarStats(totalCards, showValue, totalMissing);
+  applyMissingFilter();
 }
 
 function cardPlaceholder() {
   return `<div class="poster-placeholder"><div class="poster-placeholder-icon">P</div></div>`;
 }
 
+// ── Track price toggle ───────────────────────────────────────────
+async function toggleTrackPrice(event, id, currentValue) {
+  event.stopPropagation();
+  try {
+    await requireAuth();
+    await apiFetch(`/collection/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ track_price: !currentValue }),
+    });
+    toast(!currentValue ? 'Price tracking enabled' : 'Price tracking disabled');
+    loadCollection();
+  } catch (e) {
+    if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+// ── For trade toggle ─────────────────────────────────────────────
+async function toggleForTrade(event, id, currentValue) {
+  event.stopPropagation();
+  try {
+    await requireAuth();
+    await apiFetch(`/collection/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ for_trade: !currentValue }),
+    });
+    toast(!currentValue ? 'Added to Trade Binder' : 'Removed from Trade Binder');
+    loadCollection();
+  } catch (e) {
+    if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
+  }
+}
+
 async function deleteEntry(id) {
   if (!confirm('Remove this card from your collection?')) return;
   try {
+    await requireAuth();
     await apiFetch(`/collection/${id}`, { method: 'DELETE' });
     toast('Card removed');
     loadCollection();
   } catch (e) {
-    toast(`Error: ${e.message}`, 'error');
+    if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
   }
 }
 
@@ -287,14 +409,23 @@ const editModalClose = document.getElementById('edit-modal-close');
 
 function openEditModal(entry) {
   const f = editForm.elements;
-  f.entry_id.value      = entry.id;
-  f.quantity.value       = entry.quantity;
-  f.condition.value      = entry.condition;
-  f.language.value       = entry.language;
-  f.variant.value        = entry.variant || '';
-  f.purchase_price.value = entry.purchase_price || '';
-  f.date_acquired.value  = entry.date_acquired || '';
-  f.notes.value          = entry.notes || '';
+  f.entry_id.value       = entry.id;
+  f.quantity.value        = entry.quantity;
+  f.condition.value       = entry.condition;
+  f.language.value        = entry.language;
+  f.variant.value         = entry.variant || '';
+  f.purchase_price.value  = entry.purchase_price || '';
+  f.date_acquired.value   = entry.date_acquired || '';
+  f.notes.value           = entry.notes || '';
+  f.for_trade.checked     = entry.for_trade || false;
+
+  const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
+  const trackRow = document.getElementById('edit-track-price-row');
+  if (trackRow) {
+    trackRow.classList.toggle('hidden', !isCollOnly);
+    if (isCollOnly) f.track_price.checked = entry.track_price || false;
+  }
+
   editOverlay.classList.remove('hidden');
 }
 
@@ -305,8 +436,9 @@ editOverlay.addEventListener('click', e => {
 
 editForm.addEventListener('submit', async e => {
   e.preventDefault();
-  const f = editForm.elements;
+  const f  = editForm.elements;
   const id = f.entry_id.value;
+
   const body = {
     quantity:       parseInt(f.quantity.value, 10),
     condition:      f.condition.value,
@@ -315,19 +447,29 @@ editForm.addEventListener('submit', async e => {
     purchase_price: f.purchase_price.value ? parseFloat(f.purchase_price.value) : null,
     date_acquired:  f.date_acquired.value || null,
     notes:          f.notes.value || null,
+    for_trade:      f.for_trade.checked,
   };
 
+  const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
+  if (isCollOnly) body.track_price = f.track_price.checked;
+
   try {
+    await requireAuth();
     await apiFetch(`/collection/${id}`, { method: 'PUT', body: JSON.stringify(body) });
     toast('Entry updated');
     editOverlay.classList.add('hidden');
     loadCollection();
   } catch (e) {
-    toast(`Error: ${e.message}`, 'error');
+    if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
   }
 });
 
-document.getElementById('btn-add-card').addEventListener('click', () => openAddModal());
+document.getElementById('btn-add-card').addEventListener('click', async () => {
+  try {
+    await requireAuth();
+    openAddModal();
+  } catch (_) {}
+});
 
 // ── Card View Overlay ────────────────────────────────────────────
 const cardViewOverlay = document.getElementById('card-view-overlay');
@@ -345,9 +487,9 @@ function openCardView(entry) {
     .filter(Boolean).join(' · ');
   document.getElementById('card-view-set').textContent = setMeta;
 
-  // Chips: condition, language, variant
+  // Chips
   const chips = [
-    conditionChip(entry.condition),
+    entry.quantity === 0 ? `<span class="chip chip-default" style="color:var(--text-muted)">Missing</span>` : conditionChip(entry.condition),
     entry.language && entry.language !== 'English'
       ? `<span class="chip chip-default">${entry.language}</span>` : '',
     entry.variant
@@ -356,11 +498,13 @@ function openCardView(entry) {
       ? `<span class="chip chip-default">×${entry.quantity}</span>` : '',
     entry.card.source === 'pricecharting_scrape'
       ? `<span class="chip chip-cm">PC</span>` : '',
+    entry.for_trade
+      ? `<span class="chip chip-trade">TRADE</span>` : '',
   ].filter(Boolean).join('');
   document.getElementById('card-view-chips').innerHTML = chips;
 
-  // Price row
-  const pricingOn = window.appSettings?.pricing_mode !== 'collection_only';
+  // Price row — show if pricing is on for this entry
+  const pricingOn = entry.quantity > 0 && entryPricingOn(entry);
   const price = pricingOn ? bestPrice(entry.prices, entry.variant) : null;
   const priceEl = document.getElementById('card-view-price-row');
   if (price != null) {
@@ -372,7 +516,7 @@ function openCardView(entry) {
 
   // Purchase info
   const purchaseEl = document.getElementById('card-view-purchase');
-  if (entry.purchase_price != null) {
+  if (entry.purchase_price != null && entry.quantity > 0) {
     const purchaseStr = `€${parseFloat(entry.purchase_price).toFixed(2)}`;
     let pnl = '';
     if (price != null) {
@@ -387,7 +531,69 @@ function openCardView(entry) {
     purchaseEl.classList.add('hidden');
   }
 
+  // Toggle row — track price & for trade
+  const toggleRow = document.getElementById('card-view-toggle-row');
+  if (toggleRow) {
+    const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
+    const isMissing  = entry.quantity === 0;
+    let toggleHtml = '';
+
+    // For-trade toggle always available (except missing cards)
+    if (!isMissing) {
+      toggleHtml += `
+        <button class="btn btn-secondary btn-sm" onclick="toggleForTradeFromCardView()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" style="width:1rem;height:1rem"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+          ${entry.for_trade ? 'Remove from Trade' : 'Add to Trade'}
+        </button>`;
+    }
+
+    // Track price toggle — only in collection_only mode and only if not for_trade
+    if (isCollOnly && !entry.for_trade && !isMissing) {
+      toggleHtml += `
+        <button class="btn btn-secondary btn-sm" onclick="toggleTrackPriceFromCardView()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" style="width:1rem;height:1rem"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.601a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
+          ${entry.track_price ? 'Untrack Price' : 'Track Price'}
+        </button>`;
+    }
+
+    toggleRow.innerHTML = toggleHtml;
+  }
+
   cardViewOverlay.classList.remove('hidden');
+}
+
+async function toggleForTradeFromCardView() {
+  const entry = _cardViewEntry;
+  if (!entry) return;
+  try {
+    await requireAuth();
+    await apiFetch(`/collection/${entry.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ for_trade: !entry.for_trade }),
+    });
+    toast(!entry.for_trade ? 'Added to Trade Binder' : 'Removed from Trade Binder');
+    closeCardView();
+    loadCollection();
+  } catch (e) {
+    if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
+  }
+}
+
+async function toggleTrackPriceFromCardView() {
+  const entry = _cardViewEntry;
+  if (!entry) return;
+  try {
+    await requireAuth();
+    await apiFetch(`/collection/${entry.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ track_price: !entry.track_price }),
+    });
+    toast(!entry.track_price ? 'Price tracking enabled' : 'Price tracking disabled');
+    closeCardView();
+    loadCollection();
+  } catch (e) {
+    if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');
+  }
 }
 
 function closeCardView() {
@@ -409,7 +615,6 @@ document.getElementById('card-view-edit-btn').addEventListener('click', () => {
 });
 
 // ── Tap-to-reveal actions (touch devices) ────────────────────────
-// First tap: reveal edit/delete buttons. Second tap: open card view.
 collectionGrid.addEventListener('click', e => {
   const card = e.target.closest('.poster-card[data-entry]');
   if (!card) return;

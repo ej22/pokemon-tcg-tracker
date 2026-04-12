@@ -5,6 +5,7 @@ POST /api/cards/manual  { "url": "https://www.pricecharting.com/game/..." }
 Returns the card metadata shape expected by the search/add modal.
 """
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -19,6 +20,7 @@ from services.pricecharting_scraper import (
     ScrapeParseError,
 )
 from services.price_cache import scrape_and_store
+from services.auth import require_auth
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cards", tags=["manual-cards"])
@@ -32,6 +34,7 @@ class ManualCardRequest(BaseModel):
 async def add_manual_card(
     body: ManualCardRequest,
     session: AsyncSession = Depends(get_db),
+    _: Optional[str] = Depends(require_auth),
 ):
     """Scrape a PriceCharting product page and return card metadata + prices.
 

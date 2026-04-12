@@ -118,6 +118,10 @@ async function fetchByUrl() {
   const raw = cmUrlInput.value.trim();
   if (!raw) return;
 
+  try {
+    await requireAuth();
+  } catch (_) { return; }
+
   urlLoading.classList.remove('hidden');
   urlError.classList.add('hidden');
   urlError.textContent = '';
@@ -154,6 +158,13 @@ async function pickCard(card) {
     card.rarity || '',
     card.source === 'pricecharting_scrape' ? '• PriceCharting' : '',
   ].filter(Boolean).join(' · ');
+
+  // Show the track_price row only in collection_only mode
+  const trackPriceRow = document.getElementById('add-track-price-row');
+  if (trackPriceRow) {
+    trackPriceRow.style.display =
+      window.appSettings?.pricing_mode === 'collection_only' ? '' : 'none';
+  }
 
   // Populate variant dropdown from price API
   variantSelect.innerHTML = '<option value="">— select —</option>';
@@ -197,14 +208,17 @@ addCardForm.addEventListener('submit', async e => {
     purchase_currency: 'EUR',
     date_acquired:     f.date_acquired.value || null,
     notes:             f.notes.value || null,
+    for_trade:         f.for_trade?.checked || false,
+    track_price:       f.track_price?.checked || false,
   };
 
   try {
+    await requireAuth();
     await apiFetch('/collection', { method: 'POST', body: JSON.stringify(body) });
     toast(`${selectedCard.name} added to collection`);
     closeModal();
     loadCollection();
   } catch (err) {
-    toast(`Error: ${err.message}`, 'error');
+    if (err.message !== 'Login cancelled') toast(`Error: ${err.message}`, 'error');
   }
 });

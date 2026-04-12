@@ -150,6 +150,8 @@ async function renderPortfolioChart() {
 // ── Manual price refresh button ──────────────────────────────────
 const btnRefresh = document.getElementById('btn-refresh-prices');
 btnRefresh.addEventListener('click', async () => {
+  try { await requireAuth(); } catch (_) { return; }
+
   btnRefresh.disabled = true;
   btnRefresh.querySelector('span') && (btnRefresh.querySelector('span').textContent = 'Refreshing…');
 

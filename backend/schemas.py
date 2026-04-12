@@ -53,6 +53,8 @@ class CollectionEntryCreate(BaseModel):
     purchase_currency: str = "EUR"
     date_acquired: Optional[date] = None
     notes: Optional[str] = None
+    track_price: bool = False
+    for_trade: bool = False
 
 
 class CollectionEntryUpdate(BaseModel):
@@ -64,6 +66,8 @@ class CollectionEntryUpdate(BaseModel):
     purchase_currency: Optional[str] = None
     date_acquired: Optional[date] = None
     notes: Optional[str] = None
+    track_price: Optional[bool] = None
+    for_trade: Optional[bool] = None
 
 
 class PriceCacheOut(BaseModel):
@@ -91,6 +95,8 @@ class CollectionEntryOut(BaseModel):
     purchase_currency: str
     date_acquired: Optional[date]
     notes: Optional[str]
+    track_price: bool = False
+    for_trade: bool = False
     created_at: datetime
     card: CardOut
     prices: list[PriceCacheOut] = []

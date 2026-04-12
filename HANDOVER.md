@@ -341,6 +341,126 @@ POST /api/cards/manual {"url":"https://www.pricecharting.com/game/pokemon-promo/
 
 ---
 
+### Phase 19 — Per-card price tracking in collection-only mode
+
+**Motivation:** Collection-only mode was all-or-nothing — either all cards were priced or none were. Users wanted to track prices for specific high-value cards (e.g. cards listed for trade) without enabling full pricing for the whole collection.
+
+**New DB column (`backend/models.py`, migration `0005features`):**
+- `track_price: Mapped[bool]` — opt-in price tracking per entry (default `false`).
+- Also adds `for_trade` (Phase 21). Both use `server_default="false"` so existing rows are unaffected.
+
+**Backend logic (`routers/collection.py`):**
+- `add_to_collection`: fetches prices if `for_trade=True` OR `track_price=True` (collection_only) OR pricing is full. qty=0 entries never trigger a fetch regardless.
+- `update_collection_entry`: if the patch toggles `track_price` from false→true or `for_trade` from false→true, a price fetch is triggered immediately for that entry.
+- All write endpoints (`POST`, `PUT`, `DELETE`, `POST /bulk-missing`) require authentication if `AUTH_USERNAME` is set (Phase 22).
+
+**Scheduler update (`backend/scheduler.py`):**
+- In collection_only mode the nightly job now queries `WHERE (track_price = true OR for_trade = true) AND quantity > 0` instead of returning early unconditionally. If no tracked entries exist, it logs and returns.
+
+**Frontend — `entryPricingOn(e)` helper (`collection.js`):**
+- Returns `true` if `pricing_mode === 'full'`, or if `pricing_mode === 'collection_only'` and (`e.track_price` or `e.for_trade`). Used throughout `renderPosterCard`, `renderCollectionGrouped` value sums, and the card-view lightbox.
+
+**Frontend — star toggle button:**
+- New `poster-action-track` button (star icon) added to each poster card's action row. Calls `toggleTrackPrice(event, id, currentValue)`.
+- In full pricing mode the button is hidden (all cards already priced).
+- Active state: gold fill (`#F27E00`); inactive: muted outline.
+- Edit modal and card-view lightbox both include a `track_price` checkbox row, shown only in collection_only mode.
+
+---
+
+### Phase 20 — Zero-quantity missing-card placeholders
+
+**Motivation:** Users tracking set completion wanted to mark cards they're missing without leaving gaps in their roster. A qty=0 placeholder represents "I know this card exists but I don't own it."
+
+**Backend changes:**
+- `CollectionEntry.quantity` constraint relaxed to allow `0` (previously enforced `>= 1` at the Pydantic layer).
+- `add_to_collection`: quantity `0` skips all price fetching.
+- `list_collection`: qty=0 entries are included in the full collection response. Portfolio queries filter `quantity > 0` so missing cards do not distort value totals.
+- New endpoint `POST /api/collection/bulk-missing`:
+  - Accepts `{ set_id: int }`.
+  - Fetches all cards for the set via `GET /sets/{set_id}/cards`.
+  - Finds cards not yet in the user's collection (`card_api_id NOT IN` existing entries for this set).
+  - Inserts qty=0, condition=`"NM"` placeholders for each missing card.
+  - Returns `{ added: int }`.
+
+**Frontend — missing card styling:**
+- `renderPosterCard(e)` in `collection.js` applies `.poster-card--missing` to qty=0 entries: grayscale filter on the image, reduced opacity on the overlay.
+- A `.poster-missing-badge` label ("Missing") overlays the bottom of the card.
+- Missing cards excluded from `updateSidebarStats` card count but counted separately in a `sidebar-missing-row` stat (hidden when count is 0).
+- "Show/Hide missing" toggle button (`btn-toggle-missing`) in collection page-actions. State stored in `localStorage`; when hidden, `.hidden` is toggled on each `.poster-card--missing` element.
+
+**Frontend — "Track all missing" button in set detail:**
+- `btn-bulk-missing` button in the set detail header, shown when a set is open, hidden when back on the grid.
+- Calls `POST /api/collection/bulk-missing`; toasts "Added N missing cards as placeholders" or "All cards in this set are already tracked".
+- Triggers `loadCollection()` on success so sidebar stats update.
+
+**Add form change:** Quantity input `min` attribute changed from `1` to `0`. Helper text updated to explain that `0` = missing/wanted placeholder.
+
+---
+
+### Phase 21 — Trade Binder
+
+**Motivation:** Users wanted to flag cards they're open to trading and share a quick view of them, complete with market prices for negotiation.
+
+**New DB column:** `for_trade: Mapped[bool]` (same migration as Phase 19).
+
+**Backend changes (`routers/collection.py`):**
+- `GET /api/collection` gains `?for_trade=true` filter — returns only entries marked for trade.
+- Trade entries always have pricing fetched/updated regardless of `pricing_mode` (trade cards must have prices for binder negotiation).
+
+**New nav tab — Trade Binder:**
+- Sidebar link, topbar link, and bottom-nav tab (4-item bottom nav; SVG icons shrunk from 22px → 20px to fit 320px width).
+- `#view-trade-binder` section with summary bar (`trade-summary-bar`) and `#trade-binder-grid`.
+- `loadTradeBinder()` and `renderTradeBinder()` in `frontend/js/trade-binder.js`.
+- `renderTradePosterCard(e)`: always shows pricing; includes a remove-from-trade toggle button (active/blue state), edit button, and delete button.
+- Summary bar: card count + total estimated value in EUR.
+
+**Toggle button on collection cards:**
+- `poster-action-trade` button (arrows icon) on each collection poster. Calls `toggleForTrade(event, id, currentValue)`.
+- Active state: blue (`#3b82f6`); inactive: muted. Cards marked for trade show a `chip-trade` TRADE badge.
+- Edit modal includes a `for_trade` checkbox. Card-view lightbox includes both trade and track-price toggles.
+
+**Touch UX:** Tap-to-reveal handler added to `tradeBinderGrid` in `trade-binder.js` (same pattern as `collectionGrid` and `setCardsGrid`).
+
+---
+
+### Phase 22 — Optional JWT authentication
+
+**Motivation:** The app was originally intended for a private network (Tailscale) with no auth. To support broader deployment, authentication was added as an opt-in layer: if `AUTH_USERNAME` is not set in the environment the app behaves exactly as before with no visible auth UI. Existing single-user deployments are completely unaffected.
+
+**Backend — `backend/services/auth.py`:**
+- `require_auth(request)` async dependency: returns `None` (not raises) when `AUTH_USERNAME` env is not set. When set, validates the `Authorization: Bearer <token>` header; raises HTTP 401 if missing or invalid.
+- `create_token(username)` / `decode_token(token)` using `python-jose[cryptography]` with `JWT_SECRET_KEY` env var.
+- Password verification with `passlib[bcrypt]`.
+- New dependencies in `requirements.txt`: `python-jose[cryptography]==3.3.0`, `passlib[bcrypt]==1.7.4`.
+
+**Backend — `backend/routers/auth.py`:**
+- `POST /api/auth/login` — accepts `{username, password}`, returns `{token}` on success or HTTP 401.
+- `GET /api/auth/status` — returns `{auth_enabled: bool, authenticated: bool}`.
+- `GET /api/auth/logout` — informational (JWT is stateless; actual logout is client-side token deletion).
+
+**Protected endpoints:** All write operations (`POST /collection`, `PUT /collection/{id}`, `DELETE /collection/{id}`, `POST /collection/bulk-missing`, `PUT /settings/{key}`, `POST /prices/refresh`) use `Depends(require_auth)`. Read operations always public.
+
+**Frontend — login modal (`#login-modal-overlay`):**
+- Username + password form; error display; shown automatically when a write action requires auth.
+- `requireAuth()` async helper in `app.js`: if a token is stored and valid → resolves immediately. Otherwise shows the login modal and queues a Promise resolver. Multiple simultaneous calls (e.g. user double-taps add) all share the same queue and resolve after one login.
+- `apiFetch()` updated: adds `Authorization: Bearer <token>` header when a token exists; on HTTP 401, clears the stored token, calls `requireAuth()`, and retries the original request once (prevents infinite loops with a `_retried` flag).
+
+**Frontend — auth UI in sidebar:**
+- Logged-out state: "Sign in" button.
+- Logged-in state: username display + "Sign out" button.
+- `loadAuthState()` calls `GET /api/auth/status` on page load; `updateAuthUI()` toggles the sidebar state.
+- Settings gear button also gated through `requireAuth()`.
+
+**Env vars added (`.env.example`):**
+```
+AUTH_USERNAME=admin          # leave unset to disable auth
+AUTH_PASSWORD=yourpassword   # bcrypt hash also accepted
+JWT_SECRET_KEY=changeme      # any random string; rotate to invalidate all sessions
+```
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
@@ -392,7 +512,7 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 - **Sets browser on first boot:** visiting `http://localhost:3003/#sets` (or calling `GET /api/sets`) triggers the first fetch of all sets from PokéWallet (~763 sets). This makes one API call and takes a few seconds. After that, sets are cached for 7 days.
 - **Rate limit counters are in-memory** — restart resets them. A heavy manual refresh shortly after a restart could momentarily exceed the daily limit before the counter catches up. Low risk in practice given the 1000/day free tier.
-- **No authentication** — the app is intended for a private server behind Tailscale. Do not expose port 3003/8014 to the public internet.
+- **Authentication is opt-in** — set `AUTH_USERNAME` + `AUTH_PASSWORD` + `JWT_SECRET_KEY` in `.env` to enable. When unset (default), all endpoints are public — intended for a private server behind Tailscale or similar. Do not expose port 3003/8014 to the public internet without TLS and authentication.
 - **PriceCharting scraping reliability** — PriceCharting currently serves clean HTML with no Cloudflare interference, but this could change. If scraping starts failing, check logs for `ScrapeError` / `ScrapeParseError`. The last cached price is retained on failure; the Stale badge will appear in the UI after the TTL lapses.
 - **PriceCharting prices are USD** — converted to EUR at fetch time using the ECB rate cached for 24 hours. If `api.frankfurter.app` is unreachable the fallback rate `0.92` is used.
 - **Price history chart requires 2+ days** of data before it renders. On day one, the chart area shows a "Not enough data" message.
@@ -434,7 +554,10 @@ open http://localhost:3003
 | `frontend/js/collection.js` | Poster grid, grouped view, collapsible sections, view toggle |
 | `frontend/js/search.js` | Search modal + add form |
 | `frontend/js/portfolio.js` | Portfolio view + Chart.js; disabled state in collection-only mode |
-| `frontend/js/sets.js` | Sets browser + set detail |
+| `frontend/js/sets.js` | Sets browser + set detail + "Track all missing" button |
+| `frontend/js/trade-binder.js` | Trade Binder view — filtered collection of `for_trade` cards |
+| `backend/routers/auth.py` | JWT auth endpoints (`/api/auth/login`, `/status`, `/logout`) |
+| `backend/services/auth.py` | `require_auth()` dependency + JWT helpers |
 
 ### How the cache works
 ```

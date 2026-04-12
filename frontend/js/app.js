@@ -1,4 +1,4 @@
-/* ── Core app: routing, toast, shared helpers ─────────────────── */
+/* ── Core app: routing, toast, auth, shared helpers ───────────── */
 
 const API = '/api';
 
@@ -33,9 +33,10 @@ function applySettingsToUI() {
 
 // ── Routing ─────────────────────────────────────────────────────
 const views = {
-  collection: document.getElementById('view-collection'),
-  portfolio:  document.getElementById('view-portfolio'),
-  sets:       document.getElementById('view-sets'),
+  collection:     document.getElementById('view-collection'),
+  portfolio:      document.getElementById('view-portfolio'),
+  sets:           document.getElementById('view-sets'),
+  'trade-binder': document.getElementById('view-trade-binder'),
 };
 
 function showView(name) {
@@ -52,9 +53,10 @@ function routeFromHash() {
   const hash = window.location.hash.replace('#', '') || 'collection';
   const view = views[hash] ? hash : 'collection';
   showView(view);
-  if (view === 'collection') loadCollection();
-  if (view === 'portfolio')  loadPortfolio();
-  if (view === 'sets')       loadSets();
+  if (view === 'collection')    loadCollection();
+  if (view === 'portfolio')     loadPortfolio();
+  if (view === 'sets')          loadSets();
+  if (view === 'trade-binder')  loadTradeBinder();
 }
 
 document.querySelectorAll('.nav-link').forEach(a => {
@@ -62,6 +64,7 @@ document.querySelectorAll('.nav-link').forEach(a => {
 });
 window.addEventListener('hashchange', routeFromHash);
 window.addEventListener('DOMContentLoaded', async () => {
+  await loadAuthState();
   await loadSettings();
   routeFromHash();
 });
@@ -84,11 +87,19 @@ function toast(msg, type = 'success') {
 }
 
 // ── Sidebar stats ────────────────────────────────────────────────
-function updateSidebarStats(totalCards, valueEur) {
-  const countEl = document.getElementById('sidebar-total-cards');
-  const valueEl = document.getElementById('sidebar-value');
+function updateSidebarStats(totalCards, valueEur, missingCount = 0) {
+  const countEl   = document.getElementById('sidebar-total-cards');
+  const valueEl   = document.getElementById('sidebar-value');
+  const missingEl = document.getElementById('sidebar-missing-count');
+  const missingRow = document.getElementById('sidebar-missing-row');
+
   if (countEl) countEl.textContent = totalCards != null ? totalCards : '—';
   if (valueEl) valueEl.textContent = valueEur != null ? `€${parseFloat(valueEur).toFixed(2)}` : '—';
+
+  if (missingEl && missingRow) {
+    missingRow.classList.toggle('hidden', missingCount === 0);
+    missingEl.textContent = missingCount;
+  }
 }
 
 // ── Dismiss tapped cards on outside tap ─────────────────────────
@@ -99,11 +110,22 @@ document.addEventListener('click', e => {
 });
 
 // ── Fetch helpers ────────────────────────────────────────────────
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts,
-  });
+async function apiFetch(path, opts = {}, _retried = false) {
+  const token = localStorage.getItem('authToken');
+  const headers = { 'Content-Type': 'application/json', ...opts.headers };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(API + path, { ...opts, headers });
+
+  // On 401 when auth is enabled: show login modal and retry once
+  if (res.status === 401 && !_retried && window.authState?.authEnabled) {
+    localStorage.removeItem('authToken');
+    window.authState.authenticated = false;
+    updateAuthUI();
+    await requireAuth();
+    return apiFetch(path, opts, true);
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || `HTTP ${res.status}`);
@@ -131,6 +153,121 @@ function pnlHtml(purchasePrice, currentPrice, qty) {
   return `<span class="${cls}">${sign}€${diff.toFixed(2)}</span>`;
 }
 
+// ── Authentication ───────────────────────────────────────────────
+window.authState = { authenticated: false, authEnabled: false, username: null };
+
+// Pending requireAuth() promises resolved after successful login
+let _loginResolvers = [];
+
+async function loadAuthState() {
+  try {
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const data = await fetch(API + '/auth/status', { headers }).then(r => r.json());
+    window.authState = {
+      authEnabled:   data.auth_enabled,
+      authenticated: data.authenticated,
+      username:      data.username || null,
+    };
+    updateAuthUI();
+  } catch (_) {
+    // Non-fatal: assume auth disabled
+  }
+}
+
+function updateAuthUI() {
+  const section    = document.getElementById('sidebar-auth-section');
+  const loggedIn   = document.getElementById('auth-logged-in');
+  const loggedOut  = document.getElementById('auth-logged-out');
+  const nameEl     = document.getElementById('auth-username-display');
+
+  if (!section) return;
+
+  if (!window.authState.authEnabled) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  section.classList.remove('hidden');
+  if (window.authState.authenticated) {
+    if (nameEl) nameEl.textContent = window.authState.username || 'User';
+    loggedIn?.classList.remove('hidden');
+    loggedOut?.classList.add('hidden');
+  } else {
+    loggedIn?.classList.add('hidden');
+    loggedOut?.classList.remove('hidden');
+  }
+}
+
+async function requireAuth() {
+  if (!window.authState.authEnabled || window.authState.authenticated) return;
+  return new Promise((resolve, reject) => {
+    _loginResolvers.push({ resolve, reject });
+    showLoginModal();
+  });
+}
+
+function showLoginModal() {
+  document.getElementById('login-modal-overlay').classList.remove('hidden');
+  document.getElementById('login-error').classList.add('hidden');
+  setTimeout(() => document.getElementById('login-username').focus(), 50);
+}
+
+function hideLoginModal() {
+  document.getElementById('login-modal-overlay').classList.add('hidden');
+  document.getElementById('login-form').reset();
+  document.getElementById('login-error').classList.add('hidden');
+}
+
+function logout() {
+  localStorage.removeItem('authToken');
+  window.authState.authenticated = false;
+  window.authState.username = null;
+  updateAuthUI();
+  toast('Logged out');
+}
+
+// Login form submission
+document.getElementById('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorEl  = document.getElementById('login-error');
+
+  try {
+    const res = await fetch(API + '/auth/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
+      throw new Error(err.detail || 'Login failed');
+    }
+    const data = await res.json();
+    localStorage.setItem('authToken', data.token);
+    window.authState.authenticated = true;
+    window.authState.username = username;
+    updateAuthUI();
+    hideLoginModal();
+    toast(`Logged in as ${username}`);
+
+    // Resolve all pending requireAuth() promises
+    const resolvers = _loginResolvers.splice(0);
+    resolvers.forEach(r => r.resolve());
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  }
+});
+
+document.getElementById('login-modal-close').addEventListener('click', () => {
+  hideLoginModal();
+  // Reject pending requireAuth() promises so callers don't hang
+  const resolvers = _loginResolvers.splice(0);
+  resolvers.forEach(r => r.reject(new Error('Login cancelled')));
+});
+
 // ── Settings Modal ───────────────────────────────────────────────
 const settingsOverlay = document.getElementById('settings-modal-overlay');
 
@@ -156,8 +293,16 @@ settingsOverlay.addEventListener('click', e => {
   if (e.target === settingsOverlay) settingsOverlay.classList.add('hidden');
 });
 
-document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
-document.getElementById('btn-settings-topbar').addEventListener('click', openSettingsModal);
+document.getElementById('btn-settings').addEventListener('click', async () => {
+  await requireAuth().catch(() => {});
+  if (window.authState.authEnabled && !window.authState.authenticated) return;
+  openSettingsModal();
+});
+document.getElementById('btn-settings-topbar').addEventListener('click', async () => {
+  await requireAuth().catch(() => {});
+  if (window.authState.authEnabled && !window.authState.authenticated) return;
+  openSettingsModal();
+});
 
 document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -165,7 +310,6 @@ document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
     const currentMode = window.appSettings.pricing_mode || 'full';
     if (newMode === currentMode) return;
 
-    // Preview the selection visually
     updateSettingsModeUI(newMode);
     document.getElementById('settings-pricing-warning').classList.toggle('hidden', newMode !== 'full');
 
@@ -192,7 +336,6 @@ document.querySelectorAll('.mode-btn[data-layout]').forEach(btn => {
     window.appSettings.grouped_layout = newLayout;
     localStorage.setItem('groupedLayout', newLayout);
     applySettingsToUI();
-    // Re-render collection if currently in grouped view
     if (typeof collectionViewMode !== 'undefined' && collectionViewMode === 'grouped') {
       loadCollection();
     }

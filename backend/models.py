@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import (
-    String, Integer, Numeric, Text, DateTime, Date,
+    String, Integer, Numeric, Text, DateTime, Date, Boolean,
     ForeignKey, func
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -65,6 +65,8 @@ class CollectionEntry(Base):
     purchase_currency: Mapped[str] = mapped_column(String, default="EUR")
     date_acquired: Mapped[date | None] = mapped_column(Date, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    track_price: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    for_trade: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     card: Mapped["Card"] = relationship("Card", back_populates="collection_entries")

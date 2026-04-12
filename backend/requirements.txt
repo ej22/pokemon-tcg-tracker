@@ -10,3 +10,5 @@ pydantic-settings==2.2.1
 python-dotenv==1.0.1
 selectolax==0.3.21
 curl_cffi==0.7.4
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
