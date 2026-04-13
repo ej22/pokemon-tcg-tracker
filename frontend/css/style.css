@@ -1127,8 +1127,9 @@ textarea.input { resize: vertical; min-height: 64px; }
 }
 
 @media (max-width: 600px) {
-  /* Hide topbar entirely — bottom nav handles navigation */
-  .topbar { display: none; }
+  /* Keep topbar visible for brand + settings gear; hide nav links (bottom nav handles navigation) */
+  .topbar { display: flex; }
+  .topbar-nav { display: none; }
   .bottom-nav { display: flex; }
 
   /* Push content above bottom nav + safe area */
@@ -1522,10 +1523,7 @@ textarea.input { resize: vertical; min-height: 64px; }
   scroll-snap-align: start;
 }
 
-/* ── Topbar settings button: hide on mobile (no topbar at <=600px) */
-@media (max-width: 600px) {
-  .btn-settings-topbar { display: none; }
-}
+/* btn-settings-topbar is visible on all topbar breakpoints (topbar now shows at <=600px too) */
 
 /* ── Bottom nav: 4-item layout (Trade Binder added) ───────────── */
 .bottom-nav .nav-link svg { width: 20px; height: 20px; }
