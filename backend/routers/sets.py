@@ -125,7 +125,7 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
     if cache_incomplete and auto_fetch == "enabled":
         # Cache is empty or incomplete and user has opted in — attempt to fetch from the API.
         # Returns [] gracefully when rate-limited; we fall back to whatever is in the DB.
-        raw_cards = await pokewallet.get_set_cards(set_code or set_id)
+        raw_cards, api_total = await pokewallet.get_set_cards(set_code or set_id)
         if raw_cards:
             now = datetime.now(timezone.utc)
             for raw in raw_cards:
@@ -150,6 +150,14 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
                         last_fetched_at=now,
                     )
                     session.add(card)
+            # Correct card_count to match what the API actually has, so the
+            # cache-completeness check won't trigger unnecessary re-fetches.
+            if api_total is not None and set_obj and set_obj.card_count != api_total:
+                logger.info(
+                    "Correcting card_count for %s: %s → %s",
+                    set_code, set_obj.card_count, api_total,
+                )
+                set_obj.card_count = api_total
             await session.commit()
 
         # Re-query to pick up any newly inserted cards (or serve from DB if API was rate-limited)

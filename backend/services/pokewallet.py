@@ -114,13 +114,20 @@ async def get_sets() -> list[dict[str, Any]]:
         return data.get("data", data.get("results", data.get("sets", [])))
 
 
-async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
-    """Fetch all cards in a set (normalised), following pagination automatically."""
+async def get_set_cards(set_code: str) -> tuple[list[dict[str, Any]], int | None]:
+    """Fetch all cards in a set (normalised), following pagination automatically.
+
+    Returns (cards, api_total) where api_total is the authoritative count
+    declared by the API (pagination.total). Callers should use api_total to
+    update the local card_count so future cache-completeness checks are accurate.
+    api_total is None if the API was unreachable or returned no pagination info.
+    """
     if is_hourly_limit_reached():
         logger.warning("Hourly API limit reached, skipping set cards fetch: %s", set_code)
-        return []
+        return [], None
 
     all_raw: list[dict[str, Any]] = []
+    api_total: int | None = None
     page = 1
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -153,13 +160,16 @@ async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
             # API returns {"success": true, "set": {...}, "cards": [...], "pagination": {...}}
             if isinstance(data, list):
                 all_raw.extend(data)
-                break  # No pagination info — treat as single page
+                api_total = len(data)
+                break  # No pagination envelope — treat as single page
 
             page_cards = data.get("cards", data.get("results", []))
             all_raw.extend(page_cards)
 
             pagination = data.get("pagination", {})
             total_pages = pagination.get("total_pages", 1)
+            if api_total is None:
+                api_total = pagination.get("total")  # declared total from first page
             logger.info(
                 "get_set_cards %s: fetched page %d/%d (%d cards so far)",
                 set_code, page, total_pages, len(all_raw),
@@ -168,7 +178,7 @@ async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
                 break
             page += 1
 
-    return [_normalise_card(r) for r in all_raw]
+    return [_normalise_card(r) for r in all_raw], api_total
 
 
 def _normalise_card(raw: dict[str, Any]) -> dict[str, Any]:

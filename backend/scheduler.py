@@ -223,7 +223,7 @@ async def backfill_incomplete_sets() -> None:
             s.name, s.set_code, cached, s.card_count,
         )
 
-        raw_cards = await pokewallet.get_set_cards(s.set_code or s.set_id)
+        raw_cards, api_total = await pokewallet.get_set_cards(s.set_code or s.set_id)
         if not raw_cards:
             logger.warning("Backfill: no cards returned for %s — skipping", s.set_code)
             continue
@@ -250,6 +250,11 @@ async def backfill_incomplete_sets() -> None:
                         image_url=raw.get("image_url") or None,
                         last_fetched_at=now,
                     ))
+            # Correct card_count so future completeness checks don't re-fetch needlessly
+            if api_total is not None and s.card_count != api_total:
+                set_row = await session.get(Set, s.set_id)
+                if set_row:
+                    set_row.card_count = api_total
             await session.commit()
 
         filled += 1
