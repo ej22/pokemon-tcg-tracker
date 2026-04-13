@@ -120,7 +120,9 @@ Key rules:
 
 **Base URL:** `https://api.pokewallet.io`  
 **Auth:** `X-API-Key` header  
-**Rate limits:** ~1,000/day, ~100/hour (app stops at 80/hour, warns at 800/day)
+**Rate limits:** ~1,000/day, ~100/hour (app warns at 800/day, stops at 80/hour)
+
+**429 handling:** All four API functions check for HTTP 429 and return `[]`/`None` instead of raising. The internal hourly counter resets on container restart so it may not reflect the real server quota — the 429 check is the safety net for that gap. Set detail degrades gracefully to serving cached DB cards when rate-limited.
 
 ### Response shapes
 

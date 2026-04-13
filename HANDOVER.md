@@ -513,6 +513,20 @@ Without this, `GET /api/auth/status` returns `auth_enabled: false` even when the
 
 ---
 
+### Phase 25 — Graceful 429 handling for PokéWallet API
+
+**Problem:** The internal hourly counter (`_calls_this_hour`) resets on every container restart. After a restart, `is_hourly_limit_reached()` returns `False` even if PokéWallet's real server limit was already exhausted. Any API call would receive a `429 Too Many Requests`, `resp.raise_for_status()` would throw an unhandled `httpx.HTTPStatusError`, and FastAPI surfaced it as a 500. Affected users saw a toast error and no cards in set detail.
+
+**Fix — `backend/services/pokewallet.py`:**
+- All four API functions (`search_cards`, `get_card`, `get_sets`, `get_set_cards`) now check `resp.status_code == 429` before calling `raise_for_status()` and return `[]` / `None` instead of raising — the same defensive pattern already used for 404.
+
+**Fix — `backend/routers/sets.py` `get_set_cards`:**
+- The API fetch block now only inserts cards when `raw_cards` is non-empty (previously it committed an empty loop then re-queried, which was harmless but fragile).
+- Always re-queries the DB after the fetch attempt. If the API was rate-limited and returned `[]`, the endpoint falls back to serving whatever is already cached in the DB instead of returning an empty list.
+- Result: opening a set while rate-limited shows the cards that are already cached rather than erroring.
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
