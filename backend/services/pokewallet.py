@@ -62,6 +62,9 @@ async def search_cards(query: str, limit: int = 20) -> list[dict[str, Any]]:
             params={"q": query, "limit": limit},
             headers=_get_headers(),
         )
+        if resp.status_code == 429:
+            logger.warning("PokéWallet rate limited (429), skipping search for: %s", query)
+            return []
         resp.raise_for_status()
         _track_call()
         data = resp.json()
@@ -83,6 +86,9 @@ async def get_card(card_id: str) -> dict[str, Any] | None:
         )
         if resp.status_code == 404:
             return None
+        if resp.status_code == 429:
+            logger.warning("PokéWallet rate limited (429), skipping card fetch: %s", card_id)
+            return None
         resp.raise_for_status()
         _track_call()
         return resp.json()  # Return raw; callers use extract_* helpers
@@ -96,6 +102,9 @@ async def get_sets() -> list[dict[str, Any]]:
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(f"{BASE_URL}/sets", headers=_get_headers())
+        if resp.status_code == 429:
+            logger.warning("PokéWallet rate limited (429), skipping sets fetch")
+            return []
         resp.raise_for_status()
         _track_call()
         data = resp.json()
@@ -117,6 +126,9 @@ async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
             headers=_get_headers(),
         )
         if resp.status_code == 404:
+            return []
+        if resp.status_code == 429:
+            logger.warning("PokéWallet rate limited (429), skipping set cards fetch: %s", set_code)
             return []
         resp.raise_for_status()
         _track_call()

@@ -119,34 +119,36 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
     expected_count = (set_obj.card_count or 0) if set_obj else 0
 
     if not cards or (expected_count > 0 and len(cards) < expected_count):
-        # Cache is empty or incomplete — fetch the full set from the API
+        # Cache is empty or incomplete — attempt to fetch the full set from the API.
+        # Returns [] gracefully when rate-limited; we fall back to whatever is in the DB.
         raw_cards = await pokewallet.get_set_cards(set_code or set_id)
-        now = datetime.now(timezone.utc)
+        if raw_cards:
+            now = datetime.now(timezone.utc)
+            for raw in raw_cards:
+                # raw_cards are already normalised by pokewallet.get_set_cards
+                api_id = raw.get("api_id", "")
+                if not api_id:
+                    continue
+                existing = await session.get(Card, api_id)
+                if not existing:
+                    card = Card(
+                        api_id=api_id,
+                        name=raw.get("name", ""),
+                        clean_name=raw.get("clean_name") or raw.get("name", ""),
+                        set_id=set_id,
+                        set_code=set_code,
+                        card_number=raw.get("card_number") or None,
+                        rarity=raw.get("rarity") or None,
+                        card_type=raw.get("card_type") or None,
+                        hp=raw.get("hp") or None,
+                        stage=raw.get("stage") or None,
+                        image_url=raw.get("image_url") or None,
+                        last_fetched_at=now,
+                    )
+                    session.add(card)
+            await session.commit()
 
-        for raw in raw_cards:
-            # raw_cards are already normalised by pokewallet.get_set_cards
-            api_id = raw.get("api_id", "")
-            if not api_id:
-                continue
-            existing = await session.get(Card, api_id)
-            if not existing:
-                card = Card(
-                    api_id=api_id,
-                    name=raw.get("name", ""),
-                    clean_name=raw.get("clean_name") or raw.get("name", ""),
-                    set_id=set_id,
-                    set_code=set_code,
-                    card_number=raw.get("card_number") or None,
-                    rarity=raw.get("rarity") or None,
-                    card_type=raw.get("card_type") or None,
-                    hp=raw.get("hp") or None,
-                    stage=raw.get("stage") or None,
-                    image_url=raw.get("image_url") or None,
-                    last_fetched_at=now,
-                )
-                session.add(card)
-
-        await session.commit()
+        # Re-query to pick up any newly inserted cards (or serve from DB if API was rate-limited)
         result = await session.execute(
             select(Card).where(Card.set_id == set_id).order_by(Card.card_number)
         )
