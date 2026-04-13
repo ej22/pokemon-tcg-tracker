@@ -485,6 +485,34 @@ Without this, `GET /api/auth/status` returns `auth_enabled: false` even when the
 
 ---
 
+### Phase 24 — Full set card grid with ownership styling and auto-backfill
+
+**Motivation:** The set detail view only showed cards that had already been cached in the local DB (i.e., cards the user had previously looked up or added to their collection). Opening a set with 335 cards but only 5 cached would show only those 5. Users wanted to see the *entire* set — owned cards in full colour, everything else greyed out.
+
+**Backend — `GET /api/sets/{set_id}/cards` (`routers/sets.py`):**
+- Previously fetched from the PokéWallet API only when `len(cached_cards) == 0`. Now fetches whenever `len(cached_cards) < set.card_count` — i.e. the cache is incomplete regardless of how many cards are already there.
+- After cards are loaded, runs a second query against the `collection` table summing `quantity` (where `quantity > 0`) per card. Returns each card as a dict extending `CardOut` with an `owned_quantity` field. Zero-quantity "missing placeholder" entries do not count as owned.
+- `response_model` removed from the decorator so the extra field passes through.
+
+**Frontend — `renderSetCards()` (`frontend/js/sets.js`):**
+- Each card checks `c.owned_quantity > 0`. Unowned cards get the `poster-card--missing` class (greyscale filter + reduced opacity — the same CSS already used in the collection view).
+- Owned cards get a `poster-qty-badge` showing the quantity (reuses the existing badge style).
+- `openSetDetail()` is called again after "Track all missing" succeeds, so newly added placeholders immediately appear greyed out without a manual reload.
+
+**Frontend — auto-refresh after adding a card (`frontend/js/search.js`):**
+- After the add-card form submits successfully, if `_currentSet` is set (set detail is open), calls `openSetDetail(_currentSet)` to re-fetch the set cards. The newly owned card flips from grey to full colour instantly.
+
+**Scheduler — `backfill_incomplete_sets()` (`backend/scheduler.py`):**
+- New hourly job (runs at :05 every hour, 5 min after the counter resets at :00).
+- Finds all sets in the user's collection where the DB card count is still less than `set.card_count`.
+- For each incomplete set, calls `pokewallet.get_set_cards()` and inserts missing `Card` rows. The `if not existing:` guard makes it idempotent.
+- Checks `pokewallet.is_hourly_limit_reached()` before each set. If the limit is hit mid-run it logs a warning and exits; the job resumes automatically next hour.
+- Only processes sets that appear in the user's collection — never tries to pre-fetch all 700+ sets.
+
+**Cache-buster:** `?v=25` → `?v=26`.
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
@@ -573,7 +601,7 @@ open http://localhost:3003
 | `backend/routers/images.py` | Card artwork proxy (PokéWallet or Google Storage CDN) |
 | `backend/routers/manual_cards.py` | `POST /api/cards/manual` — scrape by PriceCharting URL |
 | `backend/routers/settings.py` | App settings CRUD + `get_pricing_mode()` helper |
-| `backend/scheduler.py` | APScheduler job definitions; nightly refresh gated on pricing_mode |
+| `backend/scheduler.py` | APScheduler job definitions; nightly refresh + hourly set backfill |
 | `frontend/js/app.js` | Routing, fetch helpers, toast, settings modal, `loadSettings()` |
 | `frontend/js/collection.js` | Poster grid, grouped view, collapsible sections, view toggle |
 | `frontend/js/search.js` | Search modal + add form |
