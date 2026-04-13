@@ -115,35 +115,60 @@ async def get_sets() -> list[dict[str, Any]]:
 
 
 async def get_set_cards(set_code: str) -> list[dict[str, Any]]:
-    """Fetch all cards in a set (normalised)."""
+    """Fetch all cards in a set (normalised), following pagination automatically."""
     if is_hourly_limit_reached():
         logger.warning("Hourly API limit reached, skipping set cards fetch: %s", set_code)
         return []
 
+    all_raw: list[dict[str, Any]] = []
+    page = 1
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(
-            f"{BASE_URL}/sets/{set_code}",
-            headers=_get_headers(),
-        )
-        if resp.status_code == 404:
-            return []
-        if resp.status_code == 429:
-            logger.warning("PokéWallet rate limited (429), skipping set cards fetch: %s", set_code)
-            return []
-        resp.raise_for_status()
-        _track_call()
-        data = resp.json()
+        while True:
+            if is_hourly_limit_reached():
+                logger.warning(
+                    "Hourly API limit reached mid-pagination for %s — got %d cards so far",
+                    set_code, len(all_raw),
+                )
+                break
 
-    if isinstance(data, dict) and "sets" in data and "cards" not in data:
-        logger.info("Disambiguation response for set %s — multiple matches", set_code)
-        return []
+            resp = await client.get(
+                f"{BASE_URL}/sets/{set_code}",
+                params={"page": page},
+                headers=_get_headers(),
+            )
+            if resp.status_code == 404:
+                break
+            if resp.status_code == 429:
+                logger.warning("PokéWallet rate limited (429), stopping pagination for %s", set_code)
+                break
+            resp.raise_for_status()
+            _track_call()
+            data = resp.json()
 
-    # API returns {"success": true, "set": {...}, "cards": [...]}
-    if isinstance(data, list):
-        raw_list = data
-    else:
-        raw_list = data.get("cards", data.get("results", []))
-    return [_normalise_card(r) for r in raw_list]
+            if isinstance(data, dict) and "sets" in data and "cards" not in data:
+                logger.info("Disambiguation response for set %s — multiple matches", set_code)
+                break
+
+            # API returns {"success": true, "set": {...}, "cards": [...], "pagination": {...}}
+            if isinstance(data, list):
+                all_raw.extend(data)
+                break  # No pagination info — treat as single page
+
+            page_cards = data.get("cards", data.get("results", []))
+            all_raw.extend(page_cards)
+
+            pagination = data.get("pagination", {})
+            total_pages = pagination.get("total_pages", 1)
+            logger.info(
+                "get_set_cards %s: fetched page %d/%d (%d cards so far)",
+                set_code, page, total_pages, len(all_raw),
+            )
+            if page >= total_pages:
+                break
+            page += 1
+
+    return [_normalise_card(r) for r in all_raw]
 
 
 def _normalise_card(raw: dict[str, Any]) -> dict[str, Any]:
