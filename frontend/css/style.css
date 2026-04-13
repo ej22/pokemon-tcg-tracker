@@ -1581,15 +1581,24 @@ textarea.input { resize: vertical; min-height: 64px; }
 /* ── Poster action buttons: track & trade ─────────────────────── */
 .poster-action-track,
 .poster-action-trade {
-  color: var(--text-muted);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
 }
-.poster-action-track.active,
-.poster-action-track:hover {
+.poster-action-track.active {
+  background: rgba(251,191,36,0.2);
   color: #FBBF24;
 }
-.poster-action-trade.active,
-.poster-action-trade:hover {
+.poster-action-track:hover {
+  background: #FBBF24;
+  color: #000;
+}
+.poster-action-trade.active {
+  background: rgba(96,165,250,0.2);
   color: #60A5FA;
+}
+.poster-action-trade:hover {
+  background: #60A5FA;
+  color: #fff;
 }
 
 /* ── Trade Binder summary bar ─────────────────────────────────── */
