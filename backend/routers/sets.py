@@ -12,6 +12,7 @@ from database import get_db
 from models import Set, Card, CollectionEntry
 from schemas import SetOut, CardOut
 from services import pokewallet
+from routers.settings import get_auto_fetch_setting
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/sets", tags=["sets"])
@@ -118,8 +119,11 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
     set_code = set_obj.set_code if set_obj else set_id
     expected_count = (set_obj.card_count or 0) if set_obj else 0
 
-    if not cards or (expected_count > 0 and len(cards) < expected_count):
-        # Cache is empty or incomplete — attempt to fetch the full set from the API.
+    auto_fetch = await get_auto_fetch_setting(session)
+    cache_incomplete = not cards or (expected_count > 0 and len(cards) < expected_count)
+
+    if cache_incomplete and auto_fetch == "enabled":
+        # Cache is empty or incomplete and user has opted in — attempt to fetch from the API.
         # Returns [] gracefully when rate-limited; we fall back to whatever is in the DB.
         raw_cards = await pokewallet.get_set_cards(set_code or set_id)
         if raw_cards:

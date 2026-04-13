@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 _VALID_VALUES = {
     "pricing_mode": {"full", "collection_only"},
+    "auto_fetch_full_set": {"enabled", "disabled"},
 }
 
 
@@ -19,6 +20,12 @@ async def get_pricing_mode(session: AsyncSession) -> str:
     """Return the current pricing mode. Defaults to 'full' if not set."""
     setting = await session.get(AppSetting, "pricing_mode")
     return setting.value if setting else "full"
+
+
+async def get_auto_fetch_setting(session: AsyncSession) -> str:
+    """Return whether auto-fetching full set card lists is enabled. Defaults to 'disabled'."""
+    setting = await session.get(AppSetting, "auto_fetch_full_set")
+    return setting.value if setting else "disabled"
 
 
 @router.get("")

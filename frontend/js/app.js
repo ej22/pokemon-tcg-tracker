@@ -4,8 +4,9 @@ const API = '/api';
 
 // ── App settings (loaded at startup) ────────────────────────────
 window.appSettings = {
-  pricing_mode:   'full',
-  grouped_layout: localStorage.getItem('groupedLayout') || 'horizontal',
+  pricing_mode:        'full',
+  auto_fetch_full_set: 'disabled',
+  grouped_layout:      localStorage.getItem('groupedLayout') || 'horizontal',
 };
 
 async function loadSettings() {
@@ -274,8 +275,16 @@ const settingsOverlay = document.getElementById('settings-modal-overlay');
 function openSettingsModal() {
   const mode = window.appSettings.pricing_mode || 'full';
   updateSettingsModeUI(mode);
+  const autoFetch = window.appSettings.auto_fetch_full_set || 'disabled';
+  updateAutoFetchUI(autoFetch);
   applySettingsToUI();
   settingsOverlay.classList.remove('hidden');
+}
+
+function updateAutoFetchUI(value) {
+  document.getElementById('autofetch-btn-disabled').classList.toggle('active', value === 'disabled');
+  document.getElementById('autofetch-btn-enabled').classList.toggle('active', value === 'enabled');
+  document.getElementById('settings-autofetch-warning').classList.toggle('hidden', value !== 'enabled');
 }
 
 function updateSettingsModeUI(mode) {
@@ -343,6 +352,28 @@ document.querySelectorAll('.mode-btn[data-layout]').forEach(btn => {
     applySettingsToUI();
     if (typeof collectionViewMode !== 'undefined' && collectionViewMode === 'grouped') {
       loadCollection();
+    }
+  });
+});
+
+document.querySelectorAll('.mode-btn[data-autofetch]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const newValue = btn.dataset.autofetch;
+    const currentValue = window.appSettings.auto_fetch_full_set || 'disabled';
+    if (newValue === currentValue) return;
+
+    updateAutoFetchUI(newValue);
+
+    try {
+      await apiFetch('/settings/auto_fetch_full_set', {
+        method: 'PUT',
+        body: JSON.stringify({ value: newValue }),
+      });
+      window.appSettings.auto_fetch_full_set = newValue;
+      toast(newValue === 'enabled' ? 'Auto-load full sets enabled' : 'Auto-load full sets disabled');
+    } catch (e) {
+      updateAutoFetchUI(currentValue);
+      toast(`Failed to save setting: ${e.message}`, 'error');
     }
   });
 });

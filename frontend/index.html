@@ -599,6 +599,32 @@
             </div>
           </div>
         </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-label">Auto-load full sets</span>
+            <span class="settings-desc">When opening a set, automatically fetch all cards from the API if the local cache is incomplete.</span>
+          </div>
+          <div class="settings-row-control">
+            <div class="mode-toggle" role="group" aria-label="Auto-load full sets">
+              <button class="mode-btn" id="autofetch-btn-disabled" data-autofetch="disabled">
+                Off
+              </button>
+              <button class="mode-btn" id="autofetch-btn-enabled" data-autofetch="enabled">
+                On
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-warning hidden" id="settings-autofetch-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+          <div>
+            <strong>Heads up!</strong> Each set you open will use 1 API call to fetch its full card list. On the free plan (100 calls/hour) this can exhaust your quota quickly if you browse several sets. Incomplete sets are filled in automatically by an hourly background job — it may take a few hours if many sets need updating.
+          </div>
+        </div>
       </div>
 
     </div>
@@ -656,11 +682,11 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=26"></script>
-<script src="js/collection.js?v=26"></script>
-<script src="js/search.js?v=26"></script>
-<script src="js/portfolio.js?v=26"></script>
-<script src="js/sets.js?v=26"></script>
-<script src="js/trade-binder.js?v=26"></script>
+<script src="js/app.js?v=27"></script>
+<script src="js/collection.js?v=27"></script>
+<script src="js/search.js?v=27"></script>
+<script src="js/portfolio.js?v=27"></script>
+<script src="js/sets.js?v=27"></script>
+<script src="js/trade-binder.js?v=27"></script>
 </body>
 </html>

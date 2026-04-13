@@ -161,6 +161,14 @@ async def backfill_incomplete_sets() -> None:
     from sqlalchemy import select, func
     from models import Set, Card, CollectionEntry
     from datetime import datetime, timezone
+    from routers.settings import get_auto_fetch_setting
+
+    async with AsyncSessionLocal() as session:
+        auto_fetch = await get_auto_fetch_setting(session)
+
+    if auto_fetch != "enabled":
+        logger.info("Backfill incomplete sets — skipped (auto_fetch_full_set is disabled)")
+        return
 
     logger.info("Backfill incomplete sets — checking collection sets")
 
