@@ -105,19 +105,21 @@ async def list_sets(session: AsyncSession = Depends(get_db)):
     return sets
 
 
-@router.get("/{set_id}/cards", response_model=list[CardOut])
+@router.get("/{set_id}/cards")
 async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
-    """Return all cards in a set (from cache, fetching if needed)."""
+    """Return all cards in a set (from cache, fetching if needed), with owned_quantity per card."""
     result = await session.execute(
         select(Card).where(Card.set_id == set_id).order_by(Card.card_number)
     )
     cards = result.scalars().all()
 
-    if not cards:
-        # Fetch from API using set_code
-        set_obj = await session.get(Set, set_id)
-        set_code = set_obj.set_code if set_obj else set_id
+    # Always resolve the set object so we can compare cached count vs expected count
+    set_obj = await session.get(Set, set_id)
+    set_code = set_obj.set_code if set_obj else set_id
+    expected_count = (set_obj.card_count or 0) if set_obj else 0
 
+    if not cards or (expected_count > 0 and len(cards) < expected_count):
+        # Cache is empty or incomplete — fetch the full set from the API
         raw_cards = await pokewallet.get_set_cards(set_code or set_id)
         now = datetime.now(timezone.utc)
 
@@ -150,7 +152,23 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
         )
         cards = result.scalars().all()
 
-    return cards
+    # Fetch ownership quantities for cards in this set (quantity > 0 only; placeholders don't count)
+    card_api_ids = [c.api_id for c in cards]
+    ownership_result = await session.execute(
+        select(
+            CollectionEntry.card_api_id,
+            func.sum(CollectionEntry.quantity).label("total_qty"),
+        )
+        .where(CollectionEntry.card_api_id.in_(card_api_ids))
+        .where(CollectionEntry.quantity > 0)
+        .group_by(CollectionEntry.card_api_id)
+    )
+    owned_map = {row.card_api_id: int(row.total_qty) for row in ownership_result}
+
+    return [
+        {**CardOut.model_validate(c).model_dump(), "owned_quantity": owned_map.get(c.api_id, 0)}
+        for c in cards
+    ]
 
 
 @router.get("/{set_code}/image")

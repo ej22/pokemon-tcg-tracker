@@ -107,12 +107,15 @@ function renderSetCards(cards) {
     const rarityBadge = c.rarity
       ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem;backdrop-filter:blur(6px);background:rgba(0,0,0,0.55);border-color:rgba(255,255,255,0.15);color:#fff">${c.rarity}</span>`
       : '';
+    const isOwned   = (c.owned_quantity || 0) > 0;
+    const ownedBadge = isOwned ? `<span class="poster-qty-badge">${c.owned_quantity}</span>` : '';
 
     return `
-      <div class="poster-card set-poster-card">
+      <div class="poster-card set-poster-card${isOwned ? '' : ' poster-card--missing'}">
         <img src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">
 
         <div class="poster-badges">
+          ${ownedBadge}
           ${rarityBadge}
         </div>
 
@@ -171,6 +174,8 @@ if (btnBulkMissing) {
         toast(`Added ${data.added} missing card${data.added === 1 ? '' : 's'} as placeholders`);
         // Reload collection so sidebar stats update
         if (typeof loadCollection === 'function') loadCollection();
+        // Refresh set detail so newly tracked cards appear greyed out
+        openSetDetail(_currentSet);
       }
     } catch (e) {
       if (e.message !== 'Login cancelled') toast(`Error: ${e.message}`, 'error');

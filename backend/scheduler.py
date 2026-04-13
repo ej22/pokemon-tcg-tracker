@@ -151,6 +151,105 @@ async def nightly_price_refresh() -> None:
     )
 
 
+async def backfill_incomplete_sets() -> None:
+    """Fill in sets where the card cache is incomplete.
+
+    Only considers sets that appear in the user's collection.  Runs at :05
+    every hour (5 min after the hourly counter resets) so it has maximum quota.
+    Stops immediately if the hourly API limit is reached and will resume next hour.
+    """
+    from sqlalchemy import select, func
+    from models import Set, Card, CollectionEntry
+    from datetime import datetime, timezone
+
+    logger.info("Backfill incomplete sets — checking collection sets")
+
+    async with AsyncSessionLocal() as session:
+        # Sets that have at least one collection entry
+        sets_with_entries_result = await session.execute(
+            select(Card.set_id).distinct()
+            .join(CollectionEntry, CollectionEntry.card_api_id == Card.api_id)
+            .where(Card.set_id.is_not(None))
+        )
+        set_ids = {row.set_id for row in sets_with_entries_result}
+
+        if not set_ids:
+            logger.info("Backfill: no sets in collection — nothing to do")
+            return
+
+        sets_result = await session.execute(
+            select(Set)
+            .where(Set.set_id.in_(set_ids))
+            .where(Set.card_count > 0)
+        )
+        all_sets = sets_result.scalars().all()
+
+        counts_result = await session.execute(
+            select(Card.set_id, func.count(Card.api_id).label("cnt"))
+            .where(Card.set_id.in_(set_ids))
+            .group_by(Card.set_id)
+        )
+        cached_counts = {row.set_id: row.cnt for row in counts_result}
+
+    incomplete = [s for s in all_sets if cached_counts.get(s.set_id, 0) < s.card_count]
+
+    if not incomplete:
+        logger.info("Backfill: all collection sets fully cached — nothing to do")
+        return
+
+    logger.info("Backfill: %d set(s) need backfilling", len(incomplete))
+
+    filled = 0
+    for s in incomplete:
+        if pokewallet.is_hourly_limit_reached():
+            logger.warning(
+                "Backfill: hourly API limit reached — filled %d/%d set(s) this run, will resume next hour",
+                filled,
+                len(incomplete),
+            )
+            return
+
+        cached = cached_counts.get(s.set_id, 0)
+        logger.info(
+            "Backfill: fetching %s (%s) — %d/%d cards cached",
+            s.name, s.set_code, cached, s.card_count,
+        )
+
+        raw_cards = await pokewallet.get_set_cards(s.set_code or s.set_id)
+        if not raw_cards:
+            logger.warning("Backfill: no cards returned for %s — skipping", s.set_code)
+            continue
+
+        now = datetime.now(timezone.utc)
+        async with AsyncSessionLocal() as session:
+            for raw in raw_cards:
+                api_id = raw.get("api_id", "")
+                if not api_id:
+                    continue
+                existing = await session.get(Card, api_id)
+                if not existing:
+                    session.add(Card(
+                        api_id=api_id,
+                        name=raw.get("name", ""),
+                        clean_name=raw.get("clean_name") or raw.get("name", ""),
+                        set_id=s.set_id,
+                        set_code=s.set_code,
+                        card_number=raw.get("card_number") or None,
+                        rarity=raw.get("rarity") or None,
+                        card_type=raw.get("card_type") or None,
+                        hp=raw.get("hp") or None,
+                        stage=raw.get("stage") or None,
+                        image_url=raw.get("image_url") or None,
+                        last_fetched_at=now,
+                    ))
+            await session.commit()
+
+        filled += 1
+        logger.info("Backfill: %s complete (%d cards from API)", s.name, len(raw_cards))
+
+    logger.info("Backfill run complete — filled %d set(s)", filled)
+
+
 async def weekly_sets_refresh() -> None:
     """Refresh sets list from PokéWallet. Runs Sunday at 03:00."""
     from sqlalchemy import select, delete
@@ -212,6 +311,13 @@ def start_scheduler() -> None:
         id="weekly_sets_refresh",
         replace_existing=True,
         name="Weekly sets refresh",
+    )
+    scheduler.add_job(
+        backfill_incomplete_sets,
+        CronTrigger(minute=5),
+        id="backfill_incomplete_sets",
+        replace_existing=True,
+        name="Backfill incomplete set card caches",
     )
     # Reset hourly counter every hour
     scheduler.add_job(

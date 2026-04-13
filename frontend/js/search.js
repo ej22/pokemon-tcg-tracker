@@ -218,6 +218,8 @@ addCardForm.addEventListener('submit', async e => {
     toast(`${selectedCard.name} added to collection`);
     closeModal();
     loadCollection();
+    // If a set detail is open, refresh it so the card's ownership status updates
+    if (typeof _currentSet !== 'undefined' && _currentSet) openSetDetail(_currentSet);
   } catch (err) {
     if (err.message !== 'Login cancelled') toast(`Error: ${err.message}`, 'error');
   }
