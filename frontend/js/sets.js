@@ -119,9 +119,9 @@ function renderSetCards(cards) {
     const isOwned    = (c.owned_quantity || 0) > 0;
     const ownedBadge = isOwned ? `<span class="poster-qty-badge">${c.owned_quantity}</span>` : '';
 
-    // When images are enabled, use data-src for lazy loading via IntersectionObserver.
-    // When images are hidden, show the placeholder tile immediately.
-    const imageHtml = showImages
+    // Always show images for owned cards. When images are hidden, only
+    // unowned cards get the placeholder tile — owned cards always show art.
+    const imageHtml = (showImages || isOwned)
       ? `<img data-src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`
       : cardPlaceholder();
 
@@ -151,8 +151,9 @@ function renderSetCards(cards) {
       </div>`;
   }).join('');
 
-  // Set up Intersection Observer to load images lazily as cards scroll into view
-  if (showImages) {
+  // Set up Intersection Observer to load images lazily as cards scroll into view.
+  // Runs whenever any img[data-src] exists (owned cards always have images even when toggle is hidden).
+  if (setCardsGrid.querySelector('img[data-src]')) {
     _imageObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (!entry.isIntersecting) return;
