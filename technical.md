@@ -85,7 +85,7 @@ Key rules:
 ### Images
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/images/{card_api_id}` | Card artwork proxy. Routes to PokéWallet or Google CDN depending on `cards.source` (24-hour browser cache) |
+| GET | `/api/images/{card_api_id}` | Card artwork. Served from disk cache (`./image_cache/`) on hit; fetches from PokéWallet or Google CDN on miss and caches to disk. Each image costs 1 API call ever. 7-day browser cache. |
 
 ### Portfolio
 | Method | Path | Description |
@@ -97,7 +97,7 @@ Key rules:
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/settings` | All settings as `{key: value}` |
-| PUT | `/api/settings/{key}` | Update a setting. Valid keys: `pricing_mode` (`"full"`/`"collection_only"`), `auto_fetch_full_set` (`"enabled"`/`"disabled"`) |
+| PUT | `/api/settings/{key}` | Update a setting. Valid keys: `pricing_mode` (`"full"`/`"collection_only"`), `auto_fetch_full_set` (`"enabled"`/`"disabled"`), `set_images` (`"visible"`/`"hidden"`) |
 | POST | `/api/auth/login` | Returns JWT token |
 | GET | `/api/auth/status` | `{auth_enabled, authenticated}` |
 | GET | `/api/auth/logout` | Informational (JWT is stateless) |
@@ -123,6 +123,16 @@ Key rules:
 **Rate limits:** ~1,000/day, ~100/hour (app warns at 800/day, stops at 80/hour)
 
 **429 handling:** All four API functions check for HTTP 429 and return `[]`/`None` instead of raising. The internal hourly counter resets on container restart so it may not reflect the real server quota — the 429 check is the safety net for that gap. Set detail degrades gracefully to serving cached DB cards when rate-limited.
+
+### Image disk cache
+
+Images are stored at `./image_cache/` (bind-mounted into the container):
+- `{card_api_id}` — raw image bytes
+- `{card_api_id}.ct` — content-type sidecar (e.g. `image/jpeg`)
+
+Each image is fetched from upstream exactly once ever; all subsequent requests are served from disk. Override path with `IMAGE_CACHE_DIR` env var.
+
+**Backup:** `tar -czf image_cache_backup.tar.gz image_cache/`
 
 ### Response shapes
 

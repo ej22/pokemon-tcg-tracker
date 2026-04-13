@@ -546,6 +546,32 @@ Without this, `GET /api/auth/status` returns `auth_enabled: false` even when the
 
 ---
 
+### Phase 27 — Server-side image disk cache, lazy loading, and set-images toggle
+
+**Motivation:** Opening a 335-card set for the first time fired 335 separate image API calls (one per card), which exhausted the PokéWallet free-tier quota (100/hour) instantly. Three complementary fixes were implemented.
+
+**Option 1 — Lazy loading (`frontend/js/sets.js`):**
+- `renderSetCards()` now renders `<img data-src="...">` instead of `<img src="...">`.
+- An `IntersectionObserver` (rootMargin: 150px) swaps `data-src → src` as each card scrolls into view. Only images the user actually sees get loaded.
+- The observer is disconnected on back-navigation and on each `renderSetCards()` call to avoid memory leaks. Module-level `_imageObserver` tracks the current observer.
+
+**Option 2 — Server-side image disk cache (`backend/routers/images.py`, `docker-compose.yml`):**
+- `images.py` checks `./image_cache/{card_api_id}` before hitting any upstream. On a cache miss, fetches from PokéWallet or PriceCharting CDN, writes `{id}` (raw bytes) and `{id}.ct` (content-type string sidecar), then serves the response.
+- Cached responses use `Cache-Control: public, max-age=604800` (7 days). Each image costs exactly one API call ever, across all browser sessions and container restarts.
+- `docker-compose.yml`: bind mount `./image_cache:/app/image_cache` so the cache lives on the host filesystem.
+- `IMAGE_CACHE_DIR` env var overrides the path (defaults to `/app/image_cache`).
+- `.gitignore`: `image_cache/` excluded.
+- **Backup:** `tar -czf image_cache_backup.tar.gz image_cache/`
+
+**Option 3 — Set-images toggle (`backend/routers/settings.py`, settings modal):**
+- New setting: `set_images` (`"visible"` / `"hidden"`, default `"visible"`).
+- When `"hidden"`, `renderSetCards()` renders `cardPlaceholder()` tiles instead of `<img>` tags — zero image API calls. Cards are still identifiable via name, number, and rarity in the poster overlay.
+- Settings modal: new "Set card images" Visible / Hidden toggle row (no warning banner needed — no quota implication for hiding).
+
+**Cache-buster:** `?v=27` → `?v=28`.
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:
