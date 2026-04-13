@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 node_modules/
 postgres_data/
+image_cache/
 .DS_Store
 *.egg-info/
 dist/

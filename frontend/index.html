@@ -625,6 +625,25 @@
             <strong>Heads up!</strong> Each set you open will use 1 API call to fetch its full card list. On the free plan (100 calls/hour) this can exhaust your quota quickly if you browse several sets. Incomplete sets are filled in automatically by an hourly background job — it may take a few hours if many sets need updating.
           </div>
         </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-label">Set card images</span>
+            <span class="settings-desc">Show card artwork in the set detail view. Hiding images avoids API calls until you're ready to load them.</span>
+          </div>
+          <div class="settings-row-control">
+            <div class="mode-toggle" role="group" aria-label="Set card images">
+              <button class="mode-btn" id="setimages-btn-visible" data-setimages="visible">
+                Visible
+              </button>
+              <button class="mode-btn" id="setimages-btn-hidden" data-setimages="hidden">
+                Hidden
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -682,11 +701,11 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=27"></script>
-<script src="js/collection.js?v=27"></script>
-<script src="js/search.js?v=27"></script>
-<script src="js/portfolio.js?v=27"></script>
-<script src="js/sets.js?v=27"></script>
-<script src="js/trade-binder.js?v=27"></script>
+<script src="js/app.js?v=28"></script>
+<script src="js/collection.js?v=28"></script>
+<script src="js/search.js?v=28"></script>
+<script src="js/portfolio.js?v=28"></script>
+<script src="js/sets.js?v=28"></script>
+<script src="js/trade-binder.js?v=28"></script>
 </body>
 </html>

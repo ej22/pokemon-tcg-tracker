@@ -6,6 +6,7 @@ const API = '/api';
 window.appSettings = {
   pricing_mode:        'full',
   auto_fetch_full_set: 'disabled',
+  set_images:          'visible',
   grouped_layout:      localStorage.getItem('groupedLayout') || 'horizontal',
 };
 
@@ -277,8 +278,15 @@ function openSettingsModal() {
   updateSettingsModeUI(mode);
   const autoFetch = window.appSettings.auto_fetch_full_set || 'disabled';
   updateAutoFetchUI(autoFetch);
+  const setImages = window.appSettings.set_images || 'visible';
+  updateSetImagesUI(setImages);
   applySettingsToUI();
   settingsOverlay.classList.remove('hidden');
+}
+
+function updateSetImagesUI(value) {
+  document.getElementById('setimages-btn-visible').classList.toggle('active', value === 'visible');
+  document.getElementById('setimages-btn-hidden').classList.toggle('active', value === 'hidden');
 }
 
 function updateAutoFetchUI(value) {
@@ -352,6 +360,28 @@ document.querySelectorAll('.mode-btn[data-layout]').forEach(btn => {
     applySettingsToUI();
     if (typeof collectionViewMode !== 'undefined' && collectionViewMode === 'grouped') {
       loadCollection();
+    }
+  });
+});
+
+document.querySelectorAll('.mode-btn[data-setimages]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const newValue = btn.dataset.setimages;
+    const currentValue = window.appSettings.set_images || 'visible';
+    if (newValue === currentValue) return;
+
+    updateSetImagesUI(newValue);
+
+    try {
+      await apiFetch('/settings/set_images', {
+        method: 'PUT',
+        body: JSON.stringify({ value: newValue }),
+      });
+      window.appSettings.set_images = newValue;
+      toast(newValue === 'visible' ? 'Set card images shown' : 'Set card images hidden');
+    } catch (e) {
+      updateSetImagesUI(currentValue);
+      toast(`Failed to save setting: ${e.message}`, 'error');
     }
   });
 });

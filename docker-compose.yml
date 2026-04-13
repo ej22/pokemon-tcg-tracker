@@ -29,6 +29,9 @@ services:
       AUTH_USERNAME: ${AUTH_USERNAME:-}
       AUTH_PASSWORD: ${AUTH_PASSWORD:-}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      IMAGE_CACHE_DIR: /app/image_cache
+    volumes:
+      - ./image_cache:/app/image_cache
     depends_on:
       db:
         condition: service_healthy

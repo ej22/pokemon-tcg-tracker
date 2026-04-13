@@ -11,6 +11,7 @@ const btnBackSets     = document.getElementById('btn-back-sets');
 const btnBulkMissing  = document.getElementById('btn-bulk-missing');
 
 let _currentSet = null;
+let _imageObserver = null;
 
 async function loadSets() {
   setsLoading.classList.remove('hidden');
@@ -93,6 +94,12 @@ async function openSetDetail(set) {
 }
 
 function renderSetCards(cards) {
+  // Disconnect any previous observer so stale img elements are released
+  if (_imageObserver) {
+    _imageObserver.disconnect();
+    _imageObserver = null;
+  }
+
   if (!cards.length) {
     setCardsGrid.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:3rem 2rem;font-size:0.825rem;color:var(--text-subtle)">
@@ -101,18 +108,26 @@ function renderSetCards(cards) {
     return;
   }
 
+  const showImages = (window.appSettings?.set_images || 'visible') !== 'hidden';
+
   setCardsGrid.innerHTML = cards.map(c => {
-    const imageUrl  = `/api/images/${c.api_id}`;
-    const cardJson  = JSON.stringify(c).replace(/"/g, '&quot;');
+    const imageUrl   = `/api/images/${c.api_id}`;
+    const cardJson   = JSON.stringify(c).replace(/"/g, '&quot;');
     const rarityBadge = c.rarity
       ? `<span class="chip chip-default" style="font-size:0.6rem;padding:0.1rem 0.35rem;backdrop-filter:blur(6px);background:rgba(0,0,0,0.55);border-color:rgba(255,255,255,0.15);color:#fff">${c.rarity}</span>`
       : '';
-    const isOwned   = (c.owned_quantity || 0) > 0;
+    const isOwned    = (c.owned_quantity || 0) > 0;
     const ownedBadge = isOwned ? `<span class="poster-qty-badge">${c.owned_quantity}</span>` : '';
+
+    // When images are enabled, use data-src for lazy loading via IntersectionObserver.
+    // When images are hidden, show the placeholder tile immediately.
+    const imageHtml = showImages
+      ? `<img data-src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">`
+      : cardPlaceholder();
 
     return `
       <div class="poster-card set-poster-card${isOwned ? '' : ' poster-card--missing'}">
-        <img src="${imageUrl}" alt="${c.name}" onerror="this.parentElement.innerHTML=cardPlaceholder()">
+        ${imageHtml}
 
         <div class="poster-badges">
           ${ownedBadge}
@@ -135,6 +150,23 @@ function renderSetCards(cards) {
         </div>
       </div>`;
   }).join('');
+
+  // Set up Intersection Observer to load images lazily as cards scroll into view
+  if (showImages) {
+    _imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const img = entry.target;
+        if (img.dataset.src) {
+          img.src = img.dataset.src;
+          delete img.dataset.src;
+        }
+        _imageObserver.unobserve(img);
+      });
+    }, { rootMargin: '150px' });
+
+    setCardsGrid.querySelectorAll('img[data-src]').forEach(img => _imageObserver.observe(img));
+  }
 }
 
 async function addCardFromSet(card) {
@@ -156,6 +188,7 @@ btnBackSets.addEventListener('click', () => {
   setDetail.classList.add('hidden');
   setsGrid.classList.remove('hidden');
   if (btnBulkMissing) btnBulkMissing.classList.add('hidden');
+  if (_imageObserver) { _imageObserver.disconnect(); _imageObserver = null; }
   _currentSet = null;
 });
 

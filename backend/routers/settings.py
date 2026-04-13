@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 _VALID_VALUES = {
     "pricing_mode": {"full", "collection_only"},
     "auto_fetch_full_set": {"enabled", "disabled"},
+    "set_images": {"visible", "hidden"},
 }
 
 
