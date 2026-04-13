@@ -303,6 +303,11 @@ document.getElementById('btn-settings-topbar').addEventListener('click', async (
   if (window.authState.authEnabled && !window.authState.authenticated) return;
   openSettingsModal();
 });
+document.getElementById('btn-settings-mobile').addEventListener('click', async () => {
+  await requireAuth().catch(() => {});
+  if (window.authState.authEnabled && !window.authState.authenticated) return;
+  openSettingsModal();
+});
 
 document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
   btn.addEventListener('click', async () => {

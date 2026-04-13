@@ -1127,9 +1127,8 @@ textarea.input { resize: vertical; min-height: 64px; }
 }
 
 @media (max-width: 600px) {
-  /* Keep topbar visible for brand + settings gear; hide nav links (bottom nav handles navigation) */
-  .topbar { display: flex; }
-  .topbar-nav { display: none; }
+  /* Hide topbar entirely — bottom nav handles navigation */
+  .topbar { display: none; }
   .bottom-nav { display: flex; }
 
   /* Push content above bottom nav + safe area */
@@ -1523,7 +1522,31 @@ textarea.input { resize: vertical; min-height: 64px; }
   scroll-snap-align: start;
 }
 
-/* btn-settings-topbar is visible on all topbar breakpoints (topbar now shows at <=600px too) */
+/* ── Mobile portrait: fixed settings gear (top-right, above bottom nav) ── */
+.btn-settings-mobile {
+  display: none;
+}
+@media (max-width: 600px) {
+  .btn-settings-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 110;
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
+  }
+  .btn-settings-mobile svg { width: 1.25rem; height: 1.25rem; }
+  .btn-settings-mobile:hover { color: var(--text); background: var(--bg-elevated); }
+}
 
 /* ── Bottom nav: 4-item layout (Trade Binder added) ───────────── */
 .bottom-nav .nav-link svg { width: 20px; height: 20px; }

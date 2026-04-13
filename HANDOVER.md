@@ -471,16 +471,17 @@ Without this, `GET /api/auth/status` returns `auth_enabled: false` even when the
 
 ### Phase 23 — Settings gear accessible on mobile portrait
 
-**Problem:** On phones (≤600px), the topbar was hidden entirely in favour of the bottom nav. The settings gear button lives in the topbar, so it was completely inaccessible in portrait mode on mobile — users had no way to open the Settings modal without rotating to landscape.
+**Problem:** On phones (≤600px), the topbar was hidden entirely in favour of the bottom nav. The settings gear button lived inside the topbar, so it was completely inaccessible in portrait mode — users had no way to open the Settings modal without rotating to landscape.
 
-**Fix (`frontend/css/style.css`):**
-- Removed the blanket `@media (max-width: 600px) { .topbar { display: none } }` rule.
-- Instead, the topbar is kept visible at all breakpoints but `.topbar-nav` is hidden at ≤600px (navigation is handled by the bottom nav).
-- A stale cleanup rule `@media (max-width: 600px) { .btn-settings-topbar { display: none } }` was also removed — it was only there to suppress the button when the topbar was hidden.
+**Fix:**
+- The topbar remains hidden on portrait mobile (restoring the original Phase 12 behaviour).
+- A new `<button class="btn-settings-mobile">` element is added to `index.html`, positioned `fixed` at `top: 0.75rem; right: 0.75rem` via `z-index: 110`. It is `display: none` at all wider breakpoints (tablet/desktop already have the topbar gear and sidebar gear).
+- Only visible at `@media (max-width: 600px)`.
+- Wired to the same `openSettingsModal()` / `requireAuth()` handler as the other two gear buttons in `app.js`.
 
-**Result:** On portrait mobile the topbar renders as a slim bar showing the PokéTCG brand (left) and the settings gear (right). The bottom nav below it handles all navigation as before. No JS changes; no layout regressions on tablet or desktop.
+**Result:** A small gear button floats in the top-right corner on portrait mobile, leaving the existing layout completely undisturbed. No layout shifts; no regressions on tablet or desktop.
 
-**CSS cache-buster:** bumped from `?v=23` to `?v=24`.
+**CSS/JS cache-buster:** bumped from `?v=24` to `?v=25`.
 
 ---
 

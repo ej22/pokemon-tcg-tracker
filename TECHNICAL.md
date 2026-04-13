@@ -159,7 +159,7 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Grouped view** — Cards organised into collapsible sections per set. Each section header shows the set name, owned/total card count, and (in full mode) the set's EUR value. Sections can be set to horizontal scroll rows (default) or a wrapping grid via Settings. Collapse state persists in `localStorage`.
 
-**Settings modal** — Gear icon in the sidebar footer (desktop), topbar (tablet 601–1023px), or topbar (phone portrait ≤600px — the topbar is kept visible on portrait mobile with nav links hidden, so the gear is accessible in the top-right). Controls pricing mode and grouped layout. Switching to full pricing mode shows a warning about API rate limits.
+**Settings modal** — Gear icon in the sidebar footer (desktop), topbar (tablet 601–1023px), or a dedicated fixed button in the top-right corner (phone portrait ≤600px — `btn-settings-mobile`, `position: fixed; top: 0.75rem; right: 0.75rem`). Controls pricing mode and grouped layout. Switching to full pricing mode shows a warning about API rate limits.
 
 **Portfolio view** — KPI summary (estimated value, total cards, unique cards, priced count) and a Chart.js line chart of portfolio value over time, plus a value-by-set breakdown table. Hidden in collection-only mode with a prompt to enable pricing.
 
@@ -175,7 +175,7 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Card view lightbox** — Clicking a card in the collection opens a full-screen overlay (`#card-view-overlay`) showing the card artwork at a larger scale alongside card metadata (name, set, number, condition, quantity), a price row, and a purchase/P&L summary. An "Edit entry" button in the panel opens the edit modal. On mobile the panel is portrait-stacked; on desktop it is a side-by-side panel (max-width 900px) with the artwork up to 380px wide. Idea credited to @Awesmoe on GitHub. Hover zoom scaling was removed at the same time to prevent card art being clipped at the edges.
 
-**Mobile layout** — Sidebar on desktop (>1023px). Compact topbar on tablets (601–1023px). Fixed bottom nav on phones (≤600px). On portrait mobile the topbar remains visible (brand + settings gear only; `.topbar-nav` is hidden because the bottom nav handles navigation), placing the settings gear in the top-right opposite where the Add Card button sits. Touch targets 44px minimum. iOS safe-area inset handled on bottom nav. The edit modal uses `svh` (small viewport height) so it does not resize when the soft keyboard opens; the form body scrolls independently and the Save button is `position: sticky; bottom: 0` so it remains reachable without scrolling.
+**Mobile layout** — Sidebar on desktop (>1023px). Compact topbar on tablets (601–1023px). Fixed bottom nav on phones (≤600px); topbar hidden. Settings gear on phones is a separate `position: fixed` button (`btn-settings-mobile`) in the top-right corner — it never affects document flow. Touch targets 44px minimum. iOS safe-area inset handled on bottom nav. The edit modal uses `svh` (small viewport height) so it does not resize when the soft keyboard opens; the form body scrolls independently and the Save button is `position: sticky; bottom: 0` so it remains reachable without scrolling.
 
 ---
 
