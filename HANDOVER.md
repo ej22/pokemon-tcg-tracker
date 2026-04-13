@@ -527,6 +527,25 @@ Without this, `GET /api/auth/status` returns `auth_enabled: false` even when the
 
 ---
 
+### Phase 26 — Opt-in auto-load full sets
+
+**Motivation:** The Phase 24 auto-fetch behaviour (always try to fill incomplete sets on open) could silently exhaust the PokéWallet API quota whenever a user browsed sets, especially after a container restart (which resets the in-memory rate counter). Made it opt-in so users understand the trade-off before enabling it.
+
+**New setting: `auto_fetch_full_set`** (values: `"enabled"` / `"disabled"`, default `"disabled"`):
+- `backend/routers/settings.py`: added to `_VALID_VALUES`; new `get_auto_fetch_setting(session)` helper (mirrors `get_pricing_mode`).
+- `backend/routers/sets.py` `get_set_cards`: only attempts the PokéWallet API fetch when `auto_fetch_full_set == "enabled"` AND cache is incomplete. When disabled (or rate-limited), always falls back to serving whatever is already in the DB.
+- `backend/scheduler.py` `backfill_incomplete_sets`: exits early when the setting is disabled.
+
+**Settings modal:**
+- New "Auto-load full sets" toggle row (Off / On) added after the Grouped view layout row.
+- When switched to On: a warning banner appears explaining that each set browsed uses 1 API call, quota can be exhausted quickly, and the hourly backfill job fills gaps automatically over time.
+- `updateAutoFetchUI(value)` function mirrors the existing `updateSettingsModeUI` pattern.
+- `window.appSettings` default includes `auto_fetch_full_set: 'disabled'`.
+
+**Cache-buster:** `?v=26` → `?v=27`.
+
+---
+
 ### Phase 9 — UI Redesign (dark OLED theme + sidebar layout)
 
 Complete frontend overhaul on the `ui-redesign` branch:

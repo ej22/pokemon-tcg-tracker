@@ -58,7 +58,7 @@ Key rules:
 |--------|------|-------------|
 | GET | `/api/sets` | All sets (weekly-cached from PokéWallet) |
 | GET | `/api/sets/mine` | Sets the user has collection entries in, with `owned_count` |
-| GET | `/api/sets/{set_id}/cards` | All cards in a set; fetches from API if cache is incomplete (`len < card_count`). Returns `CardOut + owned_quantity` |
+| GET | `/api/sets/{set_id}/cards` | All cards in a set. Fetches from API if cache is incomplete AND `auto_fetch_full_set` is enabled; otherwise serves from DB. Returns `CardOut + owned_quantity` |
 | GET | `/api/sets/{set_code}/image` | Set artwork proxy (7-day browser cache) |
 
 ### Collection
@@ -97,7 +97,7 @@ Key rules:
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/settings` | All settings as `{key: value}` |
-| PUT | `/api/settings/{key}` | Update a setting (`pricing_mode`: `"full"` or `"collection_only"`) |
+| PUT | `/api/settings/{key}` | Update a setting. Valid keys: `pricing_mode` (`"full"`/`"collection_only"`), `auto_fetch_full_set` (`"enabled"`/`"disabled"`) |
 | POST | `/api/auth/login` | Returns JWT token |
 | GET | `/api/auth/status` | `{auth_enabled, authenticated}` |
 | GET | `/api/auth/logout` | Informational (JWT is stateless) |
@@ -109,7 +109,7 @@ Key rules:
 | Job | Schedule | Purpose |
 |-----|----------|---------|
 | `nightly_price_refresh` | Daily 02:00 | Refresh prices for all collection cards (full mode) or track_price/for_trade cards (collection_only mode) |
-| `backfill_incomplete_sets` | Hourly :05 | Fill sets whose DB card count < `card_count`. Only processes sets in the user's collection. Stops if hourly API limit is hit; resumes next hour |
+| `backfill_incomplete_sets` | Hourly :05 | Fill sets whose DB card count < `card_count`. Only runs when `auto_fetch_full_set` is enabled. Only processes sets in the user's collection. Stops if hourly API limit is hit; resumes next hour |
 | `weekly_sets_refresh` | Sunday 03:00 | Refresh the sets index from PokéWallet |
 | `reset_hourly_counter` | Hourly :00 | Reset PokéWallet hourly call counter |
 | `reset_daily_counter` | Daily 00:00 | Reset PokéWallet daily call counter |
