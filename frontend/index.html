@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=30" />
+  <link rel="stylesheet" href="css/style.css?v=31" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -355,7 +355,7 @@
 
       <div class="onboarding-pref-block">
         <span class="onboarding-section-label">Pricing Mode</span>
-        <div class="mode-toggle" role="group" aria-label="Pricing mode">
+        <div class="mode-toggle onboarding-toggle" role="group" aria-label="Pricing mode">
           <button class="mode-btn onboarding-mode-btn active" data-mode="full">Full</button>
           <button class="mode-btn onboarding-mode-btn" data-mode="collection_only">Collection only</button>
         </div>
@@ -371,11 +371,40 @@
 
       <div class="onboarding-pref-block">
         <span class="onboarding-section-label">Grouped View Layout</span>
-        <div class="mode-toggle" role="group" aria-label="Grouped layout">
+        <div class="mode-toggle onboarding-toggle" role="group" aria-label="Grouped layout">
           <button class="mode-btn onboarding-layout-btn active" data-layout="horizontal">Horizontal</button>
           <button class="mode-btn onboarding-layout-btn" data-layout="grid">Grid</button>
         </div>
         <p class="onboarding-pref-desc">How cards are arranged within each set section in grouped view.</p>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="onboarding-pref-block">
+        <span class="onboarding-section-label">Auto-load Full Sets</span>
+        <div class="mode-toggle onboarding-toggle" role="group" aria-label="Auto-load full sets">
+          <button class="mode-btn onboarding-autofetch-btn active" data-autofetch="disabled">Off</button>
+          <button class="mode-btn onboarding-autofetch-btn" data-autofetch="enabled">On</button>
+        </div>
+        <p class="onboarding-pref-desc">When opening a set, automatically fetch all cards from the API if the local cache is incomplete.</p>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="onboarding-pref-block">
+        <span class="onboarding-section-label">Set Card Images</span>
+        <div class="mode-toggle onboarding-toggle" role="group" aria-label="Set card images">
+          <button class="mode-btn onboarding-setimages-btn active" data-setimages="visible">Visible</button>
+          <button class="mode-btn onboarding-setimages-btn" data-setimages="hidden">Hidden</button>
+        </div>
+        <p class="onboarding-pref-desc">Show card artwork for unowned cards in set detail. Your collection cards always show their image.</p>
+      </div>
+
+      <div class="settings-warning hidden" id="onboarding-api-warning">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+        <div>
+          <strong>High API usage warning!</strong> With both Auto-load and Card Images enabled, opening a single large set can trigger hundreds of image proxy calls on top of the set fetch. On the free PokéWallet plan (100 calls/hour) this can exhaust your quota very quickly. Consider keeping one or both of these off until your collection is cached locally.
+        </div>
       </div>
 
       <div class="onboarding-nav">
@@ -400,6 +429,14 @@
         <div class="onboarding-summary-row">
           <span>Grouped Layout</span>
           <span id="onboarding-summary-layout">Horizontal scroll</span>
+        </div>
+        <div class="onboarding-summary-row">
+          <span>Auto-load Sets</span>
+          <span id="onboarding-summary-autofetch">Off</span>
+        </div>
+        <div class="onboarding-summary-row">
+          <span>Set Card Images</span>
+          <span id="onboarding-summary-setimages">Visible</span>
         </div>
       </div>
       <p id="onboarding-finish-error" class="hidden" style="font-size:0.8rem;color:var(--red)"></p>
@@ -825,12 +862,12 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=30"></script>
-<script src="js/onboarding.js?v=30"></script>
-<script src="js/collection.js?v=30"></script>
-<script src="js/search.js?v=30"></script>
-<script src="js/portfolio.js?v=30"></script>
-<script src="js/sets.js?v=30"></script>
-<script src="js/trade-binder.js?v=30"></script>
+<script src="js/app.js?v=31"></script>
+<script src="js/onboarding.js?v=31"></script>
+<script src="js/collection.js?v=31"></script>
+<script src="js/search.js?v=31"></script>
+<script src="js/portfolio.js?v=31"></script>
+<script src="js/sets.js?v=31"></script>
+<script src="js/trade-binder.js?v=31"></script>
 </body>
 </html>

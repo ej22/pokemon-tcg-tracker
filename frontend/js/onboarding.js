@@ -3,6 +3,8 @@
 let _apiKeyValid = false;
 let _selectedPricingMode = 'full';
 let _selectedGroupedLayout = 'horizontal';
+let _selectedAutoFetch = 'disabled';
+let _selectedSetImages = 'visible';
 
 function initOnboarding() {
   const overlay = document.getElementById('onboarding-overlay');
@@ -57,6 +59,28 @@ function _initOnboardingControls() {
     });
   });
 
+  // Step 2: Preferences — auto-fetch full sets
+  document.querySelectorAll('.onboarding-autofetch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _selectedAutoFetch = btn.dataset.autofetch;
+      document.querySelectorAll('.onboarding-autofetch-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.autofetch === _selectedAutoFetch);
+      });
+      _updateApiWarning();
+    });
+  });
+
+  // Step 2: Preferences — set card images
+  document.querySelectorAll('.onboarding-setimages-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _selectedSetImages = btn.dataset.setimages;
+      document.querySelectorAll('.onboarding-setimages-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.setimages === _selectedSetImages);
+      });
+      _updateApiWarning();
+    });
+  });
+
   document.getElementById('onboarding-step2-back').addEventListener('click', () => {
     _showOnboardingStep(1);
   });
@@ -69,6 +93,12 @@ function _initOnboardingControls() {
   document.getElementById('onboarding-finish-btn').addEventListener('click', _completeOnboarding);
 }
 
+function _updateApiWarning() {
+  const warningEl = document.getElementById('onboarding-api-warning');
+  if (!warningEl) return;
+  warningEl.classList.toggle('hidden', !(_selectedAutoFetch === 'enabled' && _selectedSetImages === 'visible'));
+}
+
 function _updatePricingModeDesc(mode) {
   const fullDesc = document.getElementById('onboarding-mode-desc-full');
   const collDesc = document.getElementById('onboarding-mode-desc-coll');
@@ -77,14 +107,11 @@ function _updatePricingModeDesc(mode) {
 }
 
 function _updateOnboardingSummary() {
-  const modeEl = document.getElementById('onboarding-summary-mode');
-  const layoutEl = document.getElementById('onboarding-summary-layout');
-  if (modeEl) {
-    modeEl.textContent = _selectedPricingMode === 'full' ? 'Full pricing' : 'Collection only';
-  }
-  if (layoutEl) {
-    layoutEl.textContent = _selectedGroupedLayout === 'horizontal' ? 'Horizontal scroll' : 'Grid';
-  }
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  set('onboarding-summary-mode',      _selectedPricingMode === 'full' ? 'Full pricing' : 'Collection only');
+  set('onboarding-summary-layout',    _selectedGroupedLayout === 'horizontal' ? 'Horizontal scroll' : 'Grid');
+  set('onboarding-summary-autofetch', _selectedAutoFetch === 'enabled' ? 'On' : 'Off');
+  set('onboarding-summary-setimages', _selectedSetImages === 'visible' ? 'Visible' : 'Hidden');
 }
 
 async function _validateApiKey() {
@@ -125,16 +152,20 @@ async function _completeOnboarding() {
     await apiFetch('/settings/complete-onboarding', {
       method: 'POST',
       body: JSON.stringify({
-        pricing_mode: _selectedPricingMode,
-        grouped_layout: _selectedGroupedLayout,
+        pricing_mode:        _selectedPricingMode,
+        grouped_layout:      _selectedGroupedLayout,
+        auto_fetch_full_set: _selectedAutoFetch,
+        set_images:          _selectedSetImages,
       }),
     });
 
     localStorage.setItem('groupedLayout', _selectedGroupedLayout);
 
-    window.appSettings.onboarding_complete = 'true';
-    window.appSettings.pricing_mode = _selectedPricingMode;
-    window.appSettings.grouped_layout = _selectedGroupedLayout;
+    window.appSettings.onboarding_complete  = 'true';
+    window.appSettings.pricing_mode         = _selectedPricingMode;
+    window.appSettings.grouped_layout       = _selectedGroupedLayout;
+    window.appSettings.auto_fetch_full_set  = _selectedAutoFetch;
+    window.appSettings.set_images           = _selectedSetImages;
 
     document.getElementById('onboarding-overlay').classList.add('hidden');
 

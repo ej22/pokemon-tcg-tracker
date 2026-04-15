@@ -1808,6 +1808,10 @@ textarea.input { resize: vertical; min-height: 64px; }
   gap: 0.5rem;
 }
 
+/* Full-width toggle variant used inside the onboarding wizard */
+.mode-toggle.onboarding-toggle { width: 100%; }
+.mode-toggle.onboarding-toggle .mode-btn { flex: 1; text-align: center; min-height: 44px; }
+
 .onboarding-pref-desc {
   font-size: 0.775rem;
   color: var(--text-muted);

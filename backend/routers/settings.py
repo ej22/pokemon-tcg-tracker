@@ -117,6 +117,8 @@ async def validate_api_key(session: AsyncSession = Depends(get_db)):
 class CompleteOnboardingBody(BaseModel):
     pricing_mode: str
     grouped_layout: str
+    auto_fetch_full_set: str = "disabled"
+    set_images: str = "visible"
 
 
 @router.post("/complete-onboarding")
@@ -135,8 +137,20 @@ async def complete_onboarding(
             status_code=422,
             detail=f"Invalid grouped_layout '{body.grouped_layout}'. Allowed: ['grid', 'horizontal']",
         )
+    if body.auto_fetch_full_set not in _VALID_VALUES["auto_fetch_full_set"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid auto_fetch_full_set '{body.auto_fetch_full_set}'. Allowed: {sorted(_VALID_VALUES['auto_fetch_full_set'])}",
+        )
+    if body.set_images not in _VALID_VALUES["set_images"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid set_images '{body.set_images}'. Allowed: {sorted(_VALID_VALUES['set_images'])}",
+        )
 
     await _upsert_setting(session, "pricing_mode", body.pricing_mode)
+    await _upsert_setting(session, "auto_fetch_full_set", body.auto_fetch_full_set)
+    await _upsert_setting(session, "set_images", body.set_images)
     await _upsert_setting(session, "onboarding_complete", "true")
 
     return {"success": True, "grouped_layout": body.grouped_layout}
