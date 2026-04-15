@@ -635,6 +635,14 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 **CSS/JS cache-buster:** `?v=29` → `?v=30`.
 
+**Follow-up fix (same feature):**
+- Step 2 toggles made full-width via `.mode-toggle.onboarding-toggle` modifier (sets `width:100%` on the container and `flex:1; min-height:44px` on each button — doesn't affect the settings modal).
+- Added **Auto-load Full Sets** (Off/On, default Off) and **Set Card Images** (Visible/Hidden, default Visible) preference blocks to step 2.
+- A warning banner (`#onboarding-api-warning`, reuses `.settings-warning`) appears when both Auto-load and Card Images are enabled simultaneously, explaining the free-plan quota risk.
+- Step 3 summary expanded from 2 rows to 4 (adds Auto-load Sets and Set Card Images).
+- `POST /api/settings/complete-onboarding` now accepts and saves `auto_fetch_full_set` and `set_images` (both optional with safe defaults so older clients still work).
+- Cache-buster bumped to `?v=31`.
+
 ---
 
 ## 3. Architecture Decisions

@@ -105,7 +105,7 @@ open http://localhost:3003
 | GET    | `/api/settings`                     | No  | Get all app settings as a key→value dict      |
 | PUT    | `/api/settings/{key}`               | Yes | Update a setting value                        |
 | POST   | `/api/settings/validate-api-key`    | No  | Test the configured `POKEWALLET_API_KEY`; returns `{"status":"valid"}` or `{"status":"invalid","detail":"..."}` |
-| POST   | `/api/settings/complete-onboarding` | No  | Save `pricing_mode`, set `onboarding_complete = "true"`; returns `{"success":true,"grouped_layout":"..."}` |
+| POST   | `/api/settings/complete-onboarding` | No  | Save `pricing_mode`, `auto_fetch_full_set`, `set_images`, set `onboarding_complete = "true"`; returns `{"success":true,"grouped_layout":"..."}` |
 | POST   | `/api/auth/login`                   | —   | Authenticate with username+password; returns JWT |
 | GET    | `/api/auth/status`                  | —   | Returns `{auth_enabled, authenticated}`       |
 | GET    | `/api/auth/logout`                  | —   | Informational (JWT is stateless; client deletes token) |
