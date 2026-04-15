@@ -110,6 +110,7 @@ open http://localhost:3003
 | GET    | `/api/auth/status`                  | —   | Returns `{auth_enabled, authenticated}`       |
 | GET    | `/api/auth/logout`                  | —   | Informational (JWT is stateless; client deletes token) |
 | GET    | `/api/health`                       | No  | Health check                                  |
+| GET    | `/api/rates`                        | No  | Current PokéWallet API call counters: `calls_this_hour`, `calls_today`, `hourly_limit` (80), `daily_limit` (1000), `daily_warn` (800) |
 
 "Auth required" applies only when `AUTH_USERNAME` is set in the environment. When unset, all endpoints are open and the auth UI is hidden entirely.
 

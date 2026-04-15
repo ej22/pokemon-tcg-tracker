@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=32" />
+  <link rel="stylesheet" href="css/style.css?v=33" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -57,6 +57,10 @@
       <div class="sidebar-stat" id="sidebar-value-row">
         <span class="sidebar-stat-label">Est. value</span>
         <span class="sidebar-stat-value accent" id="sidebar-value">—</span>
+      </div>
+      <div class="sidebar-stat" id="sidebar-api-row">
+        <span class="sidebar-stat-label">API calls</span>
+        <span class="sidebar-stat-value" id="sidebar-api-value">—</span>
       </div>
       <div class="sidebar-auth hidden" id="sidebar-auth-section">
         <div class="sidebar-auth-user hidden" id="auth-logged-in">
@@ -805,6 +809,36 @@
             <strong>High API usage warning!</strong> With both Auto-load and Card Images enabled, opening a single large set can trigger hundreds of image proxy calls on top of the set fetch. On the free PokéWallet plan (100 calls/hour) this can exhaust your quota very quickly. Consider keeping one or both of these off until your collection is cached locally.
           </div>
         </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-section" id="settings-api-usage-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <span class="settings-label">PokéWallet API Usage</span>
+            <span style="font-size:0.7rem;color:var(--text-subtle)">resets hourly / daily</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.6rem">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">
+                <span>This hour</span>
+                <span id="settings-api-hour-label">— / 80</span>
+              </div>
+              <div class="api-usage-bar">
+                <div class="api-usage-fill" id="settings-api-hour-fill" style="width:0%"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem">
+                <span>Today</span>
+                <span id="settings-api-day-label">— / 1000</span>
+              </div>
+              <div class="api-usage-bar">
+                <div class="api-usage-fill" id="settings-api-day-fill" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -862,12 +896,12 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=32"></script>
-<script src="js/onboarding.js?v=32"></script>
-<script src="js/collection.js?v=32"></script>
-<script src="js/search.js?v=32"></script>
-<script src="js/portfolio.js?v=32"></script>
-<script src="js/sets.js?v=32"></script>
-<script src="js/trade-binder.js?v=32"></script>
+<script src="js/app.js?v=33"></script>
+<script src="js/onboarding.js?v=33"></script>
+<script src="js/collection.js?v=33"></script>
+<script src="js/search.js?v=33"></script>
+<script src="js/portfolio.js?v=33"></script>
+<script src="js/sets.js?v=33"></script>
+<script src="js/trade-binder.js?v=33"></script>
 </body>
 </html>

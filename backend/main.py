@@ -56,3 +56,19 @@ app.include_router(settings.router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/rates")
+async def api_rates():
+    """Return current in-memory PokéWallet API call counters."""
+    from services.pokewallet import (
+        get_calls_today, get_calls_this_hour,
+        HOURLY_LIMIT, DAILY_WARN_THRESHOLD,
+    )
+    return {
+        "calls_this_hour": get_calls_this_hour(),
+        "calls_today":     get_calls_today(),
+        "hourly_limit":    HOURLY_LIMIT,        # app stops new calls at this threshold
+        "daily_limit":     1000,                # PokéWallet free-tier hard limit
+        "daily_warn":      DAILY_WARN_THRESHOLD, # app logs a warning at this point
+    }

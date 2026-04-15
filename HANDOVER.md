@@ -645,6 +645,30 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 ---
 
+### Phase 29 — PokéWallet API usage display
+
+**Motivation:** Quota exhaustion was invisible — users had no way to tell how many calls had been made without reading logs. Added passive usage display in two places.
+
+**Backend — `GET /api/rates`** (`main.py`):
+- Returns `{ calls_this_hour, calls_today, hourly_limit (80), daily_limit (1000), daily_warn (800) }`.
+- Reads from the existing in-memory counters in `pokewallet.py` via a new `get_calls_this_hour()` getter (mirrors the existing `get_calls_today()`).
+- Counters reset on container restart; this is documented/expected behaviour.
+
+**Frontend — sidebar stat row (`#sidebar-api-row`):**
+- Always visible on desktop. Shows `N / 80h · Nd` (hourly count / hourly limit · daily count).
+- Colour coding on the hourly figure: normal (muted) → orange/accent at ≥50% → red at ≥80%.
+
+**Frontend — settings modal (`#settings-api-usage-section`):**
+- Two 4px progress bars at the bottom of the modal: "This hour" (against hourly limit of 80) and "Today" (against daily limit of 1000).
+- Bar fill transitions orange at ≥50%, red at ≥80%.
+- Refreshed every time the modal opens, plus on page load and every 60 seconds via `setInterval`.
+
+**CSS:** `.api-usage-bar` / `.api-usage-fill` (with `.warn` and `.critical` modifier classes) + `.sidebar-stat-value.api-warn` / `.api-critical` colour overrides.
+
+**Cache-buster:** `?v=32` → `?v=33`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |

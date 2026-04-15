@@ -50,6 +50,10 @@ def get_calls_today() -> int:
     return _calls_today
 
 
+def get_calls_this_hour() -> int:
+    return _calls_this_hour
+
+
 async def search_cards(query: str, limit: int = 20) -> list[dict[str, Any]]:
     """Search for cards. Returns a normalised list of card dicts."""
     if is_hourly_limit_reached():

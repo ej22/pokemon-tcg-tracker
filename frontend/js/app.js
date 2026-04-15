@@ -73,6 +73,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   routeFromHash();
+  loadApiUsage();
+  setInterval(loadApiUsage, 60_000);
 });
 
 // ── Toast ────────────────────────────────────────────────────────
@@ -90,6 +92,41 @@ function toast(msg, type = 'success') {
   };
   const timer = setTimeout(dismiss, 3500);
   el.addEventListener('click', () => { clearTimeout(timer); dismiss(); });
+}
+
+// ── API usage ────────────────────────────────────────────────────
+async function loadApiUsage() {
+  try {
+    const d = await fetch('/api/rates').then(r => r.json());
+
+    // Sidebar: show "N / 80h" with colour coding on hourly counter
+    const sidebarEl = document.getElementById('sidebar-api-value');
+    if (sidebarEl) {
+      const hourPct = d.calls_this_hour / d.hourly_limit;
+      sidebarEl.textContent = `${d.calls_this_hour} / ${d.hourly_limit}h · ${d.calls_today}d`;
+      sidebarEl.classList.remove('api-warn', 'api-critical');
+      if      (hourPct >= 0.8) sidebarEl.classList.add('api-critical');
+      else if (hourPct >= 0.5) sidebarEl.classList.add('api-warn');
+    }
+
+    // Settings modal bars
+    _setApiBar('settings-api-hour-fill', 'settings-api-hour-label',
+      d.calls_this_hour, d.hourly_limit);
+    _setApiBar('settings-api-day-fill', 'settings-api-day-label',
+      d.calls_today, d.daily_limit);
+  } catch (_) { /* non-fatal */ }
+}
+
+function _setApiBar(fillId, labelId, used, limit) {
+  const fill  = document.getElementById(fillId);
+  const label = document.getElementById(labelId);
+  if (!fill || !label) return;
+  const pct = Math.min(used / limit, 1) * 100;
+  fill.style.width = `${pct}%`;
+  fill.classList.remove('warn', 'critical');
+  if      (pct >= 80) fill.classList.add('critical');
+  else if (pct >= 50) fill.classList.add('warn');
+  label.textContent = `${used} / ${limit}`;
 }
 
 // ── Sidebar stats ────────────────────────────────────────────────
@@ -285,6 +322,7 @@ function openSettingsModal() {
   const setImages = window.appSettings.set_images || 'visible';
   updateSetImagesUI(setImages);
   applySettingsToUI();
+  loadApiUsage();
   settingsOverlay.classList.remove('hidden');
 }
 
