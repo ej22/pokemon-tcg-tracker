@@ -1,6 +1,9 @@
+from datetime import datetime, timezone
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -14,6 +17,8 @@ _VALID_VALUES = {
     "pricing_mode": {"full", "collection_only"},
     "auto_fetch_full_set": {"enabled", "disabled"},
     "set_images": {"visible", "hidden"},
+    "onboarding_complete": {"true", "false"},
+    "pokewallet_api_key_status": {"valid", "invalid", "unknown"},
 }
 
 
@@ -52,7 +57,6 @@ async def update_setting(
             detail=f"Invalid value '{body.value}' for '{key}'. Allowed: {sorted(_VALID_VALUES[key])}",
         )
 
-    from datetime import datetime, timezone
     setting = await session.get(AppSetting, key)
     if setting:
         setting.value = body.value
@@ -63,3 +67,76 @@ async def update_setting(
 
     await session.commit()
     return {"key": key, "value": body.value}
+
+
+async def _upsert_setting(session: AsyncSession, key: str, value: str) -> None:
+    setting = await session.get(AppSetting, key)
+    if setting:
+        setting.value = value
+        setting.updated_at = datetime.now(timezone.utc)
+    else:
+        session.add(AppSetting(key=key, value=value, updated_at=datetime.now(timezone.utc)))
+    await session.commit()
+
+
+@router.post("/validate-api-key")
+async def validate_api_key(session: AsyncSession = Depends(get_db)):
+    """Test the configured POKEWALLET_API_KEY with a lightweight API call."""
+    import os
+    api_key = os.environ.get("POKEWALLET_API_KEY", "")
+    if not api_key:
+        await _upsert_setting(session, "pokewallet_api_key_status", "invalid")
+        return {"status": "invalid", "detail": "POKEWALLET_API_KEY is not set in environment"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://api.pokewallet.io/sets",
+                params={"limit": 1},
+                headers={"X-API-Key": api_key},
+            )
+        if resp.status_code in (401, 403):
+            await _upsert_setting(session, "pokewallet_api_key_status", "invalid")
+            return {"status": "invalid", "detail": "API key rejected (HTTP {})".format(resp.status_code)}
+        if not resp.is_success:
+            await _upsert_setting(session, "pokewallet_api_key_status", "invalid")
+            return {"status": "invalid", "detail": f"Unexpected response: HTTP {resp.status_code}"}
+        data = resp.json()
+        # PokéWallet sets endpoint returns {"success": true, "data": [...]}
+        if not (isinstance(data, dict) and data.get("success")):
+            await _upsert_setting(session, "pokewallet_api_key_status", "invalid")
+            return {"status": "invalid", "detail": "Unexpected response format from API"}
+    except httpx.RequestError as exc:
+        await _upsert_setting(session, "pokewallet_api_key_status", "invalid")
+        return {"status": "invalid", "detail": f"Network error: {exc}"}
+
+    await _upsert_setting(session, "pokewallet_api_key_status", "valid")
+    return {"status": "valid"}
+
+
+class CompleteOnboardingBody(BaseModel):
+    pricing_mode: str
+    grouped_layout: str
+
+
+@router.post("/complete-onboarding")
+async def complete_onboarding(
+    body: CompleteOnboardingBody,
+    session: AsyncSession = Depends(get_db),
+):
+    """Save onboarding preferences and mark onboarding as complete."""
+    if body.pricing_mode not in _VALID_VALUES["pricing_mode"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid pricing_mode '{body.pricing_mode}'. Allowed: {sorted(_VALID_VALUES['pricing_mode'])}",
+        )
+    if body.grouped_layout not in {"horizontal", "grid"}:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid grouped_layout '{body.grouped_layout}'. Allowed: ['grid', 'horizontal']",
+        )
+
+    await _upsert_setting(session, "pricing_mode", body.pricing_mode)
+    await _upsert_setting(session, "onboarding_complete", "true")
+
+    return {"success": True, "grouped_layout": body.grouped_layout}

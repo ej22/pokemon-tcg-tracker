@@ -68,6 +68,10 @@ window.addEventListener('hashchange', routeFromHash);
 window.addEventListener('DOMContentLoaded', async () => {
   await loadAuthState();
   await loadSettings();
+  if (window.appSettings.onboarding_complete === 'false') {
+    initOnboarding();
+    return;
+  }
   routeFromHash();
 });
 

@@ -1685,3 +1685,190 @@ textarea.input { resize: vertical; min-height: 64px; }
 
 /* ── Missing filter toggle ─────────────────────────────────────── */
 .btn-toggle-missing.missing-hidden { opacity: 0.5; }
+
+/* ── Onboarding Wizard ─────────────────────────────────────────── */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.onboarding-wizard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-height: 90svh;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.onboarding-steps-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  transition: background 0.2s ease, width 0.2s ease, border-radius 0.2s ease;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.step-dot.active {
+  background: var(--accent);
+  width: 24px;
+  border-radius: 4px;
+}
+
+.onboarding-step { display: none; flex-direction: column; gap: 1.25rem; }
+.onboarding-step.active { display: flex; }
+
+.onboarding-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.onboarding-logo-icon {
+  width: 52px;
+  height: 52px;
+  background: var(--accent);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.onboarding-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.25rem;
+  line-height: 1.2;
+}
+
+.onboarding-tagline {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.onboarding-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.onboarding-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.onboarding-section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.onboarding-pref-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.onboarding-pref-desc {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  min-height: 1.5em;
+  line-height: 1.5;
+}
+
+/* Validation status area */
+.onboarding-validate-status {
+  min-height: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+}
+
+.validate-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--bg-elevated);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: onboarding-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes onboarding-spin {
+  to { transform: rotate(360deg); }
+}
+
+.validate-success { color: #4ade80; font-weight: 500; }
+.validate-error   { color: var(--red); }
+
+/* Summary card on step 3 */
+.onboarding-summary {
+  background: var(--bg-elevated);
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.onboarding-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.825rem;
+}
+
+.onboarding-summary-row span:first-child { color: var(--text-muted); }
+.onboarding-summary-row span:last-child  { color: var(--text); font-weight: 600; }
+
+@media (max-width: 600px) {
+  .onboarding-wizard {
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    gap: 1rem;
+    max-height: 92svh;
+    max-height: 92dvh;
+  }
+  .onboarding-heading { font-size: 1.2rem; }
+  .onboarding-logo-icon { width: 44px; height: 44px; font-size: 1.3rem; }
+}

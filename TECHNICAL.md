@@ -104,6 +104,8 @@ open http://localhost:3003
 | GET    | `/api/images/{card_api_id}`         | No  | Proxy card artwork from PokéWallet (browser-cacheable) |
 | GET    | `/api/settings`                     | No  | Get all app settings as a key→value dict      |
 | PUT    | `/api/settings/{key}`               | Yes | Update a setting value                        |
+| POST   | `/api/settings/validate-api-key`    | No  | Test the configured `POKEWALLET_API_KEY`; returns `{"status":"valid"}` or `{"status":"invalid","detail":"..."}` |
+| POST   | `/api/settings/complete-onboarding` | No  | Save `pricing_mode`, set `onboarding_complete = "true"`; returns `{"success":true,"grouped_layout":"..."}` |
 | POST   | `/api/auth/login`                   | —   | Authenticate with username+password; returns JWT |
 | GET    | `/api/auth/status`                  | —   | Returns `{auth_enabled, authenticated}`       |
 | GET    | `/api/auth/logout`                  | —   | Informational (JWT is stateless; client deletes token) |
@@ -122,6 +124,8 @@ Settings are stored in the `app_settings` database table and exposed via `GET/PU
 | Key | Values | Default | Effect |
 |-----|--------|---------|--------|
 | `pricing_mode` | `full`, `collection_only` | `full` | Controls whether prices are fetched on card add and nightly refresh |
+| `onboarding_complete` | `true`, `false` | `false` (fresh install) / `true` (existing data) | Controls whether the first-boot onboarding wizard is shown on page load |
+| `pokewallet_api_key_status` | `valid`, `invalid`, `unknown` | `unknown` | Tracks whether the configured API key has been validated via the wizard |
 
 The `get_pricing_mode(session)` helper in `routers/settings.py` is used internally by `collection.py`, `prices.py`, and `scheduler.py` to gate price-fetching behaviour.
 

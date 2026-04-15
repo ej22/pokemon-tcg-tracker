@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=27" />
+  <link rel="stylesheet" href="css/style.css?v=30" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -288,6 +288,130 @@
     </section>
 
   </main>
+</div>
+
+<!-- ── Onboarding Wizard ──────────────────────────────────────── -->
+<div id="onboarding-overlay" class="onboarding-overlay hidden">
+  <div class="onboarding-wizard">
+
+    <!-- Step indicators -->
+    <div class="onboarding-steps-indicator">
+      <span class="step-dot active" data-step="0"></span>
+      <span class="step-dot" data-step="1"></span>
+      <span class="step-dot" data-step="2"></span>
+      <span class="step-dot" data-step="3"></span>
+    </div>
+
+    <!-- Step 0: Welcome -->
+    <div class="onboarding-step active" data-step="0">
+      <div class="onboarding-logo">
+        <div class="onboarding-logo-icon">P</div>
+        <div>
+          <h1 class="onboarding-heading">PokéTCG Tracker</h1>
+          <p class="onboarding-tagline">Track your Pokémon TCG collection</p>
+        </div>
+      </div>
+      <p class="onboarding-desc">
+        Welcome! This wizard will help you set up your tracker in just a few steps.
+        You'll validate your PokéWallet API connection and choose your preferred pricing and display settings.
+      </p>
+      <div class="onboarding-actions">
+        <button class="btn btn-primary" id="onboarding-step0-next" style="min-width:160px">
+          Get Started
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:1rem;height:1rem"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 1: API Key Validation -->
+    <div class="onboarding-step" data-step="1">
+      <div>
+        <h2 class="onboarding-heading" style="font-size:1.2rem">Connect to PokéWallet</h2>
+        <p class="onboarding-desc" style="margin-top:0.5rem">
+          Your PokéWallet API key is configured in the <code style="font-family:var(--font-mono);font-size:0.8em;background:var(--bg-elevated);padding:0.1em 0.4em;border-radius:3px">.env</code> file.
+          Click the button below to verify the connection is working.
+        </p>
+      </div>
+      <div>
+        <button class="btn btn-secondary" id="onboarding-validate-btn" style="min-height:44px">
+          Validate Connection
+        </button>
+        <div class="onboarding-validate-status" id="onboarding-validate-status" style="margin-top:0.75rem"></div>
+      </div>
+      <div class="onboarding-nav">
+        <button class="btn btn-ghost" id="onboarding-step1-back">← Back</button>
+        <button class="btn btn-primary hidden" id="onboarding-step1-next" style="min-width:120px">
+          Next →
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Preferences -->
+    <div class="onboarding-step" data-step="2">
+      <div>
+        <h2 class="onboarding-heading" style="font-size:1.2rem">Set Your Preferences</h2>
+        <p class="onboarding-desc" style="margin-top:0.5rem">Choose how you'd like the app to behave. You can always change these later in Settings.</p>
+      </div>
+
+      <div class="onboarding-pref-block">
+        <span class="onboarding-section-label">Pricing Mode</span>
+        <div class="mode-toggle" role="group" aria-label="Pricing mode">
+          <button class="mode-btn onboarding-mode-btn active" data-mode="full">Full</button>
+          <button class="mode-btn onboarding-mode-btn" data-mode="collection_only">Collection only</button>
+        </div>
+        <p class="onboarding-pref-desc" id="onboarding-mode-desc-full">
+          Prices fetched from CardMarket when cards are added, and refreshed nightly. Enables portfolio value tracking.
+        </p>
+        <p class="onboarding-pref-desc hidden" id="onboarding-mode-desc-coll">
+          No price fetching — track what you own and visualise set completion. Uses minimal API calls.
+        </p>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="onboarding-pref-block">
+        <span class="onboarding-section-label">Grouped View Layout</span>
+        <div class="mode-toggle" role="group" aria-label="Grouped layout">
+          <button class="mode-btn onboarding-layout-btn active" data-layout="horizontal">Horizontal</button>
+          <button class="mode-btn onboarding-layout-btn" data-layout="grid">Grid</button>
+        </div>
+        <p class="onboarding-pref-desc">How cards are arranged within each set section in grouped view.</p>
+      </div>
+
+      <div class="onboarding-nav">
+        <button class="btn btn-ghost" id="onboarding-step2-back">← Back</button>
+        <button class="btn btn-primary" id="onboarding-step2-next" style="min-width:120px">
+          Next →
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: All Done -->
+    <div class="onboarding-step" data-step="3">
+      <div>
+        <h2 class="onboarding-heading" style="font-size:1.2rem">You're all set!</h2>
+        <p class="onboarding-desc" style="margin-top:0.5rem">Here's a summary of your chosen settings. You can change any of these later from the Settings menu.</p>
+      </div>
+      <div class="onboarding-summary">
+        <div class="onboarding-summary-row">
+          <span>Pricing Mode</span>
+          <span id="onboarding-summary-mode">Full pricing</span>
+        </div>
+        <div class="onboarding-summary-row">
+          <span>Grouped Layout</span>
+          <span id="onboarding-summary-layout">Horizontal scroll</span>
+        </div>
+      </div>
+      <p id="onboarding-finish-error" class="hidden" style="font-size:0.8rem;color:var(--red)"></p>
+      <div class="onboarding-actions">
+        <button class="btn btn-primary" id="onboarding-finish-btn" style="min-width:180px">
+          Start Collecting
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:1rem;height:1rem"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- ── Add Card Modal ──────────────────────────────────────────── -->
@@ -701,11 +825,12 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=29"></script>
-<script src="js/collection.js?v=29"></script>
-<script src="js/search.js?v=29"></script>
-<script src="js/portfolio.js?v=29"></script>
-<script src="js/sets.js?v=29"></script>
-<script src="js/trade-binder.js?v=29"></script>
+<script src="js/app.js?v=30"></script>
+<script src="js/onboarding.js?v=30"></script>
+<script src="js/collection.js?v=30"></script>
+<script src="js/search.js?v=30"></script>
+<script src="js/portfolio.js?v=30"></script>
+<script src="js/sets.js?v=30"></script>
+<script src="js/trade-binder.js?v=30"></script>
 </body>
 </html>

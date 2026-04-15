@@ -604,6 +604,39 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 ---
 
+### Phase 28 — First-boot onboarding wizard
+
+**Motivation:** New users had no guided setup flow. The API key had to be configured in `.env` with no in-app feedback, and pricing/layout preferences were buried in the Settings modal. The wizard ensures new deployments are correctly configured before the app loads any data.
+
+**Migration `0006_add_onboarding_settings.py`:**
+- Seeds `pokewallet_api_key_status = 'unknown'` for all deployments.
+- Seeds `onboarding_complete` conditionally: `'true'` if `SELECT COUNT(*) FROM collection > 0` (existing deployment skips the wizard), `'false'` otherwise (fresh install shows it). Both use `ON CONFLICT DO NOTHING` so the migration is safe to replay.
+
+**Backend — `routers/settings.py`:**
+- `_VALID_VALUES` extended with `onboarding_complete` (`true`/`false`) and `pokewallet_api_key_status` (`valid`/`invalid`/`unknown`).
+- `_upsert_setting(session, key, value)` — shared helper used by both new endpoints.
+- `POST /api/settings/validate-api-key` — makes a live `GET https://api.pokewallet.io/sets?limit=1` with the `POKEWALLET_API_KEY` env var. Returns `{"status":"valid"}` on HTTP 200 + `success:true`, or `{"status":"invalid","detail":"..."}` on auth errors, network failures, or unexpected responses. Upserts `pokewallet_api_key_status` either way.
+- `POST /api/settings/complete-onboarding` — accepts `{pricing_mode, grouped_layout}`. Validates both fields, upserts `pricing_mode` and `onboarding_complete = "true"`, returns `{success: true, grouped_layout}`. `grouped_layout` is frontend-only (stored in `localStorage`), so it is echoed back rather than persisted.
+
+**Frontend — `frontend/js/onboarding.js`** (new file):
+- `initOnboarding()` — removes `.hidden` from `#onboarding-overlay`, wires up all button listeners.
+- `_showOnboardingStep(n)` — toggles `.active` on `.onboarding-step[data-step]` and `.step-dot[data-step]` elements.
+- `_validateApiKey()` — calls `POST /api/settings/validate-api-key`; shows spinner during request; on success shows green checkmark and unhides the Next button; on failure shows the error message and re-enables the Retry button. The user cannot advance past step 1 without a valid key.
+- `_completeOnboarding()` — calls `POST /api/settings/complete-onboarding`; stores `grouped_layout` in `localStorage`; patches `window.appSettings`; hides the overlay; calls `applySettingsToUI()` + `routeFromHash()` to boot the normal app.
+
+**Frontend — `app.js` integration:**
+- `DOMContentLoaded` handler now checks `window.appSettings.onboarding_complete === 'false'` after `loadSettings()`. If true: calls `initOnboarding()` and `return`s early — `routeFromHash()`, sidebar stats, and all collection API calls are skipped until onboarding completes.
+
+**Frontend — `index.html`:**
+- `#onboarding-overlay` added as a direct child of `<body>` (outside `.app-layout`), before the modals. It covers everything with `position:fixed; inset:0; z-index:10000; background:var(--bg)` — solid full-screen takeover, not a backdrop.
+- 4 steps: Welcome → API Key validation → Preferences (pricing mode + grouped layout) → Summary + "Start Collecting".
+- Preference toggles reuse the existing `.mode-toggle`/`.mode-btn` pill component.
+- Step indicator uses animated pill dots (`.step-dot`): inactive dots are 8px circles, active dot expands to 24×8px pill.
+
+**CSS/JS cache-buster:** `?v=29` → `?v=30`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |
