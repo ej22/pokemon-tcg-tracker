@@ -291,12 +291,20 @@ function openSettingsModal() {
 function updateSetImagesUI(value) {
   document.getElementById('setimages-btn-visible').classList.toggle('active', value === 'visible');
   document.getElementById('setimages-btn-hidden').classList.toggle('active', value === 'hidden');
+  _updateSettingsCombinedWarning();
 }
 
 function updateAutoFetchUI(value) {
   document.getElementById('autofetch-btn-disabled').classList.toggle('active', value === 'disabled');
   document.getElementById('autofetch-btn-enabled').classList.toggle('active', value === 'enabled');
-  document.getElementById('settings-autofetch-warning').classList.toggle('hidden', value !== 'enabled');
+  _updateSettingsCombinedWarning();
+}
+
+function _updateSettingsCombinedWarning() {
+  const autoFetchOn    = document.getElementById('autofetch-btn-enabled')?.classList.contains('active');
+  const imagesVisible  = document.getElementById('setimages-btn-visible')?.classList.contains('active');
+  document.getElementById('settings-combined-warning')
+    ?.classList.toggle('hidden', !(autoFetchOn && imagesVisible));
 }
 
 function updateSettingsModeUI(mode) {

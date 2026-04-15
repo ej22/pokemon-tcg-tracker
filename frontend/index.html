@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=31" />
+  <link rel="stylesheet" href="css/style.css?v=32" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -780,13 +780,6 @@
           </div>
         </div>
 
-        <div class="settings-warning hidden" id="settings-autofetch-warning">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-          <div>
-            <strong>Heads up!</strong> Each set you open will use 1 API call to fetch its full card list. On the free plan (100 calls/hour) this can exhaust your quota quickly if you browse several sets. Incomplete sets are filled in automatically by an hourly background job — it may take a few hours if many sets need updating.
-          </div>
-        </div>
-
         <div class="settings-divider"></div>
 
         <div class="settings-row">
@@ -803,6 +796,13 @@
                 Hidden
               </button>
             </div>
+          </div>
+        </div>
+
+        <div class="settings-warning hidden" id="settings-combined-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+          <div>
+            <strong>High API usage warning!</strong> With both Auto-load and Card Images enabled, opening a single large set can trigger hundreds of image proxy calls on top of the set fetch. On the free PokéWallet plan (100 calls/hour) this can exhaust your quota very quickly. Consider keeping one or both of these off until your collection is cached locally.
           </div>
         </div>
       </div>
@@ -862,12 +862,12 @@
   </a>
 </nav>
 
-<script src="js/app.js?v=31"></script>
-<script src="js/onboarding.js?v=31"></script>
-<script src="js/collection.js?v=31"></script>
-<script src="js/search.js?v=31"></script>
-<script src="js/portfolio.js?v=31"></script>
-<script src="js/sets.js?v=31"></script>
-<script src="js/trade-binder.js?v=31"></script>
+<script src="js/app.js?v=32"></script>
+<script src="js/onboarding.js?v=32"></script>
+<script src="js/collection.js?v=32"></script>
+<script src="js/search.js?v=32"></script>
+<script src="js/portfolio.js?v=32"></script>
+<script src="js/sets.js?v=32"></script>
+<script src="js/trade-binder.js?v=32"></script>
 </body>
 </html>
