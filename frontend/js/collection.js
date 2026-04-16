@@ -27,40 +27,43 @@ function setCollectionViewMode(mode) {
   if (reorderBtn) reorderBtn.classList.toggle('hidden', mode !== 'grouped');
   if (mode !== 'grouped' && reorderMode) {
     reorderMode = false;
+    _savedCollapseStates = null;
     if (reorderBtn) reorderBtn.classList.remove('active');
   }
 }
 
 function setReorderMode(active) {
   reorderMode = active;
-  collectionGrid.classList.toggle('reorder-mode', active);
   const btn = document.getElementById('btn-reorder-sets');
   if (btn) btn.classList.toggle('active', active);
 
   if (active) {
-    // Save each set's collapse state then collapse them all for easy dragging
+    // Snapshot current collapse states from the DOM before re-render
     _savedCollapseStates = {};
     collectionGrid.querySelectorAll('.set-group').forEach(g => {
-      const id = g.dataset.setId;
-      _savedCollapseStates[id] = localStorage.getItem(`setGroup_${id}`);
-      localStorage.setItem(`setGroup_${id}`, 'collapsed');
+      _savedCollapseStates[g.dataset.setId] = g.classList.contains('collapsed');
     });
-  } else {
-    // Restore collapse states from before reorder mode was entered
-    if (_savedCollapseStates) {
-      Object.entries(_savedCollapseStates).forEach(([id, state]) => {
-        if (state == null) {
-          localStorage.removeItem(`setGroup_${id}`);
-        } else {
-          localStorage.setItem(`setGroup_${id}`, state);
-        }
-      });
-      _savedCollapseStates = null;
-    }
   }
 
+  // Re-render to add/remove drag handles, draggable attrs, and move buttons
   if (_lastEntries && collectionViewMode === 'grouped') {
     renderCollection(_lastEntries);
+  }
+
+  // Manipulate collapse state directly in the DOM after re-render — more
+  // reliable than trying to communicate via localStorage through the render cycle
+  if (active) {
+    collectionGrid.querySelectorAll('.set-group').forEach(g => {
+      g.classList.add('collapsed');
+      g.querySelector('.set-group-header')?.setAttribute('aria-expanded', 'false');
+    });
+  } else if (_savedCollapseStates) {
+    collectionGrid.querySelectorAll('.set-group').forEach(g => {
+      const wasCollapsed = _savedCollapseStates[g.dataset.setId] ?? false;
+      g.classList.toggle('collapsed', wasCollapsed);
+      g.querySelector('.set-group-header')?.setAttribute('aria-expanded', String(!wasCollapsed));
+    });
+    _savedCollapseStates = null;
   }
 }
 
@@ -139,7 +142,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const btnReorder = document.getElementById('btn-reorder-sets');
   if (btnReorder) {
-    btnReorder.addEventListener('click', () => setReorderMode(!reorderMode));
+    btnReorder.addEventListener('click', async () => {
+      try {
+        await requireAuth();
+        setReorderMode(!reorderMode);
+      } catch (_) {}
+    });
   }
 
   const btnMissing = document.getElementById('btn-toggle-missing');
