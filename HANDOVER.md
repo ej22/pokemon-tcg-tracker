@@ -701,6 +701,12 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 **CSS/JS cache-buster:** `?v=33` → `?v=34`.
 
+**Follow-up fixes (same feature):**
+- **Collapse not working:** the original implementation set `localStorage` keys to `'collapsed'` and relied on `renderCollection` reading them back, but this chain was silently unreliable. Fixed by applying collapse/restore directly to the DOM *after* the re-render — synchronous DOM manipulation is always reliable.
+- **Auth gate:** the reorder button click handler now calls `requireAuth()` before activating reorder mode. When auth is disabled (`AUTH_USERNAME` unset), `requireAuth()` resolves immediately — no behaviour change for unauthenticated deployments.
+- **State cleanup:** `_savedCollapseStates` is now cleared when leaving grouped view to avoid stale state leaking into subsequent renders.
+- **Cache-buster:** `?v=34` → `?v=35`.
+
 ---
 
 ## 3. Architecture Decisions
