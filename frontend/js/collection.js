@@ -6,6 +6,9 @@ const collectionEmpty = document.getElementById('collection-empty');
 // ── View mode (flat grid vs grouped by set) ──────────────────────
 let collectionViewMode = localStorage.getItem('collectionViewMode') || 'flat';
 let showMissingCards   = localStorage.getItem('showMissingCards') !== 'false';
+let reorderMode        = false;
+let _lastEntries       = null;
+let _dragSrcEl         = null;
 
 function setCollectionViewMode(mode) {
   collectionViewMode = mode;
@@ -18,6 +21,81 @@ function setCollectionViewMode(mode) {
   }
   const btn = document.getElementById('btn-toggle-view');
   if (btn) btn.classList.toggle('active', mode === 'grouped');
+  // Show reorder button only in grouped mode; exit reorder mode when leaving grouped
+  const reorderBtn = document.getElementById('btn-reorder-sets');
+  if (reorderBtn) reorderBtn.classList.toggle('hidden', mode !== 'grouped');
+  if (mode !== 'grouped' && reorderMode) {
+    reorderMode = false;
+    if (reorderBtn) reorderBtn.classList.remove('active');
+  }
+}
+
+function setReorderMode(active) {
+  reorderMode = active;
+  collectionGrid.classList.toggle('reorder-mode', active);
+  const btn = document.getElementById('btn-reorder-sets');
+  if (btn) btn.classList.toggle('active', active);
+  if (_lastEntries && collectionViewMode === 'grouped') {
+    renderCollection(_lastEntries);
+  }
+}
+
+function moveSetGroup(setId, direction) {
+  const currentOrder = JSON.parse(localStorage.getItem('setGroupOrder') || 'null')
+    || [...collectionGrid.querySelectorAll('.set-group')].map(g => g.dataset.setId);
+  const idx = currentOrder.indexOf(setId);
+  if (idx < 0) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= currentOrder.length) return;
+  const newOrder = [...currentOrder];
+  [newOrder[idx], newOrder[newIdx]] = [newOrder[newIdx], newOrder[idx]];
+  localStorage.setItem('setGroupOrder', JSON.stringify(newOrder));
+  if (_lastEntries) renderCollection(_lastEntries);
+}
+
+function saveSetGroupOrder() {
+  const order = [...collectionGrid.querySelectorAll('.set-group')].map(g => g.dataset.setId);
+  localStorage.setItem('setGroupOrder', JSON.stringify(order));
+}
+
+function initSetGroupDragDrop() {
+  const groups = [...collectionGrid.querySelectorAll('.set-group[draggable="true"]')];
+
+  groups.forEach(group => {
+    group.addEventListener('dragstart', e => {
+      _dragSrcEl = group;
+      requestAnimationFrame(() => group.classList.add('dragging'));
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    group.addEventListener('dragend', () => {
+      _dragSrcEl = null;
+      collectionGrid.querySelectorAll('.set-group').forEach(g =>
+        g.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom')
+      );
+      saveSetGroupOrder();
+    });
+
+    group.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (!_dragSrcEl || _dragSrcEl === group) return;
+
+      collectionGrid.querySelectorAll('.set-group').forEach(g =>
+        g.classList.remove('drag-over-top', 'drag-over-bottom')
+      );
+
+      const rect = group.getBoundingClientRect();
+      const isAfter = e.clientY > rect.top + rect.height / 2;
+      group.classList.add(isAfter ? 'drag-over-bottom' : 'drag-over-top');
+
+      if (isAfter) {
+        collectionGrid.insertBefore(_dragSrcEl, group.nextSibling);
+      } else {
+        collectionGrid.insertBefore(_dragSrcEl, group);
+      }
+    });
+  });
 }
 
 function applyMissingFilter() {
@@ -35,6 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCollection();
   });
 
+  const btnReorder = document.getElementById('btn-reorder-sets');
+  if (btnReorder) {
+    btnReorder.addEventListener('click', () => setReorderMode(!reorderMode));
+  }
+
   const btnMissing = document.getElementById('btn-toggle-missing');
   if (btnMissing) {
     btnMissing.addEventListener('click', () => {
@@ -49,6 +132,7 @@ async function loadCollection() {
   showSkeletonCards();
   try {
     const entries = await apiFetch('/collection');
+    _lastEntries = entries;
     renderCollection(entries);
   } catch (e) {
     toast(`Failed to load collection: ${e.message}`, 'error');
@@ -219,9 +303,10 @@ function renderCollection(entries) {
   if (collectionViewMode === 'grouped') {
     collectionGrid.classList.remove('card-grid');
     collectionGrid.classList.add('set-group-stack');
+    collectionGrid.classList.toggle('reorder-mode', reorderMode);
     renderCollectionGrouped(entries);
   } else {
-    collectionGrid.classList.remove('set-group-stack');
+    collectionGrid.classList.remove('set-group-stack', 'reorder-mode');
     collectionGrid.classList.add('card-grid');
     renderCollectionFlat(entries);
   }
@@ -273,12 +358,26 @@ function renderCollectionGrouped(entries) {
     groups.get(key).entries.push(e);
   }
 
-  // Sort groups by set name
-  const sorted = [...groups.entries()].sort((a, b) =>
-    a[1].setName.localeCompare(b[1].setName)
-  );
+  // Sort groups: respect saved order, alphabetical for new groups
+  const savedOrder = JSON.parse(localStorage.getItem('setGroupOrder') || 'null');
+  let sorted;
+  if (savedOrder && savedOrder.length > 0) {
+    const orderMap = new Map(savedOrder.map((id, i) => [id, i]));
+    sorted = [...groups.entries()].sort((a, b) => {
+      const aInOrder = orderMap.has(a[0]);
+      const bInOrder = orderMap.has(b[0]);
+      if (aInOrder && bInOrder) return orderMap.get(a[0]) - orderMap.get(b[0]);
+      if (aInOrder) return -1;
+      if (bInOrder) return 1;
+      return a[1].setName.localeCompare(b[1].setName);
+    });
+  } else {
+    sorted = [...groups.entries()].sort((a, b) =>
+      a[1].setName.localeCompare(b[1].setName)
+    );
+  }
 
-  const htmlParts = sorted.map(([setId, group]) => {
+  const htmlParts = sorted.map(([setId, group], idx) => {
     let groupValue = 0;
 
     const cardsHtml = group.entries.map(e => {
@@ -319,15 +418,41 @@ function renderCollectionGrouped(entries) {
     const bodyClass = layout === 'horizontal' ? 'set-group-body set-group-row' : 'set-group-body card-grid';
     const collapsed = localStorage.getItem(`setGroup_${setId}`) === 'collapsed';
 
-    return `
-      <div class="set-group${collapsed ? ' collapsed' : ''}" data-set-id="${setId}">
-        <button class="set-group-header" aria-expanded="${!collapsed}">
-          <span class="set-group-chevron">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
-          </span>
-          <span class="set-group-name">${group.setName}</span>
-          <span class="set-group-meta">${valueLabel}<span class="set-group-count">${countLabel}</span></span>
+    const isFirst = idx === 0;
+    const isLast  = idx === sorted.length - 1;
+
+    const dragHandle = reorderMode ? `
+      <span class="set-group-drag-handle" title="Drag to reorder">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" /></svg>
+      </span>` : '';
+
+    const moveBtns = reorderMode ? `
+      <div class="set-group-reorder-btns">
+        <button class="set-group-move-btn" title="Move up"${isFirst ? ' disabled' : ''}
+          onclick="event.stopPropagation();moveSetGroup('${setId}', -1)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" /></svg>
         </button>
+        <button class="set-group-move-btn" title="Move down"${isLast ? ' disabled' : ''}
+          onclick="event.stopPropagation();moveSetGroup('${setId}', 1)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+        </button>
+      </div>` : '';
+
+    const draggable = reorderMode ? ' draggable="true"' : '';
+
+    return `
+      <div class="set-group${collapsed ? ' collapsed' : ''}" data-set-id="${setId}"${draggable}>
+        <div class="set-group-header-row">
+          ${dragHandle}
+          <button class="set-group-header" aria-expanded="${!collapsed}">
+            <span class="set-group-chevron">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+            </span>
+            <span class="set-group-name">${group.setName}</span>
+            <span class="set-group-meta">${valueLabel}<span class="set-group-count">${countLabel}</span></span>
+          </button>
+          ${moveBtns}
+        </div>
         <div class="${bodyClass}">${cardsHtml}</div>
       </div>`;
   });
@@ -348,6 +473,8 @@ function renderCollectionGrouped(entries) {
       }
     });
   });
+
+  if (reorderMode) initSetGroupDragDrop();
 
   const showValue = totalValue > 0 ? totalValue : null;
   updateSidebarStats(totalCards, showValue, totalMissing);

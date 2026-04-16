@@ -669,6 +669,40 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 ---
 
+### Phase 30 — Set group reordering in grouped view
+
+**Motivation:** In grouped view, sets were always sorted alphabetically by set name. Users wanted to be able to pin favourite sets to the top or arrange them in a custom order.
+
+**Reorder mode toggle (`#btn-reorder-sets`):**
+- New icon-only button in the collection page-actions bar.
+- Hidden when in flat view; shown (and highlighted orange when active) when grouped view is active.
+- Toggling off grouped view also exits reorder mode.
+
+**Drag-and-drop (desktop, `@media (hover: hover)`):**
+- When reorder mode is on, each `.set-group` gets `draggable="true"` and a two-line grip handle (`set-group-drag-handle`) appears flush to the left of the header, styled as a visual extension of the header pill.
+- `dragstart` records the dragged element; `dragover` live-inserts it before/after the target (top/bottom half detection via `getBoundingClientRect`); `dragend` calls `saveSetGroupOrder()` which reads the final DOM order and persists to `localStorage`.
+- Dragging group fades to 40% opacity; a 2px orange `box-shadow` line indicates the drop target.
+
+**Up/Down buttons (touch, `@media (hover: none)`):**
+- On touch devices the drag handle is hidden and replaced by stacked ↑/↓ arrow buttons (`set-group-move-btn`) on the right edge of each header.
+- `moveSetGroup(setId, direction)` swaps the entry in the saved order array and re-renders from the cached `_lastEntries` (no API call).
+- First group has ↑ disabled; last group has ↓ disabled.
+
+**Persistent order (`localStorage` key `setGroupOrder`):**
+- Stored as a JSON array of set IDs in the user's preferred order.
+- `renderCollectionGrouped` reads `setGroupOrder` and sorts groups accordingly. Sets not present in the saved array (newly added sets) fall back to alphabetical and appear after the ordered groups.
+
+**Re-render without API call:**
+- `loadCollection()` caches the fetched entries in `_lastEntries`.
+- `setReorderMode()` and `moveSetGroup()` call `renderCollection(_lastEntries)` — instant re-render from cache with no server roundtrip.
+
+**HTML structure change:**
+- `.set-group-header` (`<button>`) is now wrapped in a `.set-group-header-row` flex div (alongside the drag handle and move buttons). All existing JS and CSS selectors continue to work: `btn.closest('.set-group')` traverses the extra wrapper transparently, and `.set-group.collapsed .set-group-body` still matches.
+
+**CSS/JS cache-buster:** `?v=33` → `?v=34`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |

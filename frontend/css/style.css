@@ -1522,6 +1522,90 @@ textarea.input { resize: vertical; min-height: 64px; }
   scroll-snap-align: start;
 }
 
+/* ── Set group reorder mode ────────────────────────────────────── */
+.set-group-header-row {
+  display: flex;
+  align-items: stretch;
+}
+.set-group-header-row > .set-group-header {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Drag handle (desktop) */
+.set-group-drag-handle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+  transition: color var(--duration) var(--ease);
+}
+.set-group-drag-handle:active { cursor: grabbing; }
+.set-group-drag-handle svg { width: 1rem; height: 1rem; pointer-events: none; }
+.set-group-drag-handle:hover { color: var(--text); }
+
+.set-group-stack.reorder-mode .set-group-drag-handle {
+  display: flex;
+}
+.set-group-stack.reorder-mode .set-group-header {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Move up/down buttons (touch devices) */
+.set-group-reorder-btns {
+  display: none;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.set-group-move-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-left: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
+}
+.set-group-move-btn:first-child {
+  border-radius: 0 var(--radius) 0 0;
+  border-bottom: none;
+}
+.set-group-move-btn:last-child {
+  border-radius: 0 0 var(--radius) 0;
+}
+.set-group-move-btn:hover:not(:disabled) { color: var(--text); background: var(--bg-elevated); }
+.set-group-move-btn:disabled { opacity: 0.2; cursor: default; }
+.set-group-move-btn svg { width: 0.85rem; height: 0.85rem; pointer-events: none; }
+
+/* Show move buttons on touch, hide drag handle */
+@media (hover: none) {
+  .set-group-stack.reorder-mode .set-group-reorder-btns { display: flex; }
+  .set-group-stack.reorder-mode .set-group-drag-handle { display: none; }
+  .set-group-stack.reorder-mode .set-group-header { border-radius: var(--radius) 0 0 var(--radius); }
+}
+
+/* Show drag handle on desktop, no move buttons */
+@media (hover: hover) {
+  .set-group-stack.reorder-mode .set-group-drag-handle { display: flex; }
+}
+
+/* Drag states */
+.set-group.dragging { opacity: 0.4; }
+.set-group.drag-over-top { box-shadow: 0 -2px 0 var(--accent); }
+.set-group.drag-over-bottom { box-shadow: 0 2px 0 var(--accent); }
+
 /* ── Mobile portrait: fixed settings gear (top-right, above bottom nav) ── */
 .btn-settings-mobile {
   display: none;
