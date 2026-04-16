@@ -6,9 +6,10 @@ const collectionEmpty = document.getElementById('collection-empty');
 // ── View mode (flat grid vs grouped by set) ──────────────────────
 let collectionViewMode = localStorage.getItem('collectionViewMode') || 'flat';
 let showMissingCards   = localStorage.getItem('showMissingCards') !== 'false';
-let reorderMode        = false;
-let _lastEntries       = null;
-let _dragSrcEl         = null;
+let reorderMode             = false;
+let _lastEntries            = null;
+let _dragSrcEl              = null;
+let _savedCollapseStates    = null;
 
 function setCollectionViewMode(mode) {
   collectionViewMode = mode;
@@ -35,6 +36,29 @@ function setReorderMode(active) {
   collectionGrid.classList.toggle('reorder-mode', active);
   const btn = document.getElementById('btn-reorder-sets');
   if (btn) btn.classList.toggle('active', active);
+
+  if (active) {
+    // Save each set's collapse state then collapse them all for easy dragging
+    _savedCollapseStates = {};
+    collectionGrid.querySelectorAll('.set-group').forEach(g => {
+      const id = g.dataset.setId;
+      _savedCollapseStates[id] = localStorage.getItem(`setGroup_${id}`);
+      localStorage.setItem(`setGroup_${id}`, 'collapsed');
+    });
+  } else {
+    // Restore collapse states from before reorder mode was entered
+    if (_savedCollapseStates) {
+      Object.entries(_savedCollapseStates).forEach(([id, state]) => {
+        if (state == null) {
+          localStorage.removeItem(`setGroup_${id}`);
+        } else {
+          localStorage.setItem(`setGroup_${id}`, state);
+        }
+      });
+      _savedCollapseStates = null;
+    }
+  }
+
   if (_lastEntries && collectionViewMode === 'grouped') {
     renderCollection(_lastEntries);
   }
