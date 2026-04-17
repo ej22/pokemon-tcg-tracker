@@ -44,7 +44,9 @@ function renderSetsGrid(sets) {
 
   setsGrid.innerHTML = sets.map(s => {
     const code      = s.set_code || String(s.set_id);
-    const imageUrl  = `/api/sets/${code}/image`;
+    const imageUrl  = s.set_id === 'pc_promo'
+      ? 'https://www.pricecharting.com/images/pokemon-sets/pokemon-promo.png'
+      : `/api/sets/${code}/image`;
     const relDate   = s.release_date ? s.release_date.slice(0, 10) : '';
 
     return `
