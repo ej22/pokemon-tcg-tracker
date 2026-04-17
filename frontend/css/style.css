@@ -1502,24 +1502,17 @@ textarea.input { resize: vertical; min-height: 64px; }
 .set-group.collapsed .set-group-body { display: none; }
 .set-group-body { margin-top: 0.75rem; }
 
-/* Horizontal scroll row layout */
+/* Horizontal wrapping row layout */
 .set-group-row {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 0.75rem;
-  overflow-x: auto;
   padding-bottom: 0.5rem;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
 }
-.set-group-row::-webkit-scrollbar { height: 4px; }
-.set-group-row::-webkit-scrollbar-track { background: var(--bg-raised); border-radius: 2px; }
-.set-group-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-.set-group-row::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
 .set-group-row .poster-card {
   flex-shrink: 0;
   width: 148px;
-  scroll-snap-align: start;
 }
 
 /* ── Set group reorder mode ────────────────────────────────────── */
