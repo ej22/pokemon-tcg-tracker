@@ -12,7 +12,8 @@ A self-hosted app for tracking your Pokémon TCG card collection. Add your cards
 - **Sets view** — browse which sets you have cards in, see how many cards from each set you own, and bulk-insert missing-card placeholders with one button.
 - **Portfolio** — see your collection's estimated EUR market value, with a chart showing how it's changed over time.
 - **Two modes** — run in *full mode* (prices fetched automatically from CardMarket) or *collection-only mode* (no price lookups — just track what you own, with optional per-card price tracking for the cards that matter).
-- **Grouped view** — browse your collection grouped by set, with collapsible sections showing owned/missing counts. Each set row scrolls horizontally, or switch to a grid layout in settings.
+- **Grouped view** — browse your collection grouped by set, with collapsible sections showing owned/missing counts. Sort cards within each section by set number or rarity (ascending or descending). Drag sets into a custom order using the reorder button, or use ↑/↓ buttons on touch devices.
+- **Card view** — click any card in your collection to open a full-screen view of the artwork alongside the card's details, pricing, and P&L. An Edit button opens the edit modal from there.
 - **Missing cards** — add qty=0 placeholders for cards you don't own yet. They show in a greyed-out "Missing" state so you can see exactly what's left to complete a set.
 - **Trade Binder** — mark cards as available for trade. A dedicated Trade Binder view shows them all in one place with their current market values.
 - **Promo cards** — for cards not in PokéWallet, add them by pasting a PriceCharting URL.
@@ -80,6 +81,16 @@ If the card isn't in PokéWallet (some promos and newer sets), click **Add by Pr
 
 ---
 
+## Grouped view controls
+
+When the collection is in grouped mode, three extra controls appear in the header bar:
+
+- **Sort dropdown** — sort cards within every set section simultaneously. Options: set number ascending/descending, or rarity low-to-high/high-to-low (with set number as a tiebreaker). Your choice is remembered across reloads.
+- **Reorder sets button** (requires login if auth is enabled) — activates reorder mode. All sections collapse for easy navigation, then on desktop you can drag them into any order using the grip handle on the left of each header. On touch devices, ↑/↓ arrow buttons appear on the right instead. Exiting reorder mode restores each section to its previous collapsed/expanded state. Your custom order persists across reloads.
+- **Show/Hide missing** — toggles visibility of qty=0 placeholder cards across the whole collection.
+
+---
+
 ## Trade Binder
 
 Click the arrows icon on any collection card to mark it as available for trade. Marked cards get a **TRADE** badge and appear in the **Trade Binder** tab, which shows all your tradeable cards in one place along with their current market values and a total estimated value.
@@ -96,8 +107,10 @@ Click the gear icon at the bottom of the sidebar to open settings.
 |---------|-------------|
 | **Full mode** | Prices are fetched when you add a card and refreshed nightly at 02:00. Enables portfolio value and P&L tracking. Uses your PokéWallet API quota. |
 | **Collection only** | No automatic price fetching. Use this if you just want to track what you own. You can still opt individual cards into price tracking using the star icon, and trade-binder cards are always priced. |
-| **Grouped layout — Horizontal** | Cards within each set section scroll horizontally (default). |
-| **Grouped layout — Grid** | Cards within each set section wrap into a full grid. |
+| **Grouped layout — Horizontal** | Cards within each set section wrap across rows (default). |
+| **Grouped layout — Grid** | Cards within each set section use an even auto-fill grid. |
+| **Auto-load full sets** | When opening a set in the Sets view, automatically fetch all cards from PokéWallet to show the complete roster (not just cached cards). Off by default to conserve API quota. |
+| **Set card images** | Show or hide card artwork in the Sets view. Hiding images avoids API calls when browsing sets. |
 
 ### Per-card price tracking (collection-only mode)
 
