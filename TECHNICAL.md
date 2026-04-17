@@ -170,7 +170,7 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Portfolio view** — KPI summary (estimated value, total cards, unique cards, priced count) and a Chart.js line chart of portfolio value over time, plus a value-by-set breakdown table. Hidden in collection-only mode with a prompt to enable pricing.
 
-**Sets view** — Landscape poster grid of sets the user has cards in. Clicking a set loads its cards as a portrait poster grid with an Add to Collection button on hover. A "Track all missing" button inserts qty=0 placeholders for every uncollected card in the set.
+**Sets view** — Landscape poster grid of sets the user has cards in. Clicking a set loads its cards as a portrait poster grid with an Add to Collection button on hover. A "Track all missing" button inserts qty=0 placeholders for every uncollected card in the set. Set images are proxied through `/api/sets/{code}/image` (PokéWallet); the `pc_promo` set (PriceCharting imports) uses a hardcoded PriceCharting image URL instead since it has no PokéWallet counterpart. If a set image fails to load the img is hidden and a text placeholder is inserted alongside the existing card content (name, owned count, overlay are preserved).
 
 **Trade Binder view** — Filtered collection view showing only cards marked `for_trade=true`. Always shows CardMarket prices regardless of `pricing_mode`. Summary bar displays card count and total estimated value. Cards can be removed from the binder via the trade toggle button.
 

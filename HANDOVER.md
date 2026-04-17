@@ -772,6 +772,22 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 ---
 
+### Phase 35 — Sets page fixes for PriceCharting promo set
+
+**Motivation:** The `pc_promo` set (cards added via PriceCharting URL) appeared as a blank icon on the sets page with no name, owned count, or overlay visible.
+
+**Root cause 1 — onerror wiped card content:**
+- The set poster `<img>` `onerror` handler did `this.parentElement.innerHTML = setPlaceholder(...)`, replacing the entire card HTML (name, badges, overlay) with just the placeholder icon. PokéWallet sets are unaffected because their images load. `pc_promo` always 404s on the PokéWallet image endpoint, so the whole card was wiped.
+- Fix: changed to `this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin', setPlaceholder(...))` — matches the collection card pattern: hide the broken img, insert the placeholder alongside the existing content.
+
+**Root cause 2 — no image for pc_promo:**
+- Even with the onerror fix, the set showed a placeholder icon. The user identified a suitable image at `https://www.pricecharting.com/images/pokemon-sets/pokemon-promo.png`.
+- Fix: in `renderSetsGrid` (`sets.js`), `imageUrl` is set to the PriceCharting URL when `s.set_id === 'pc_promo'`; all other sets use the PokéWallet proxy as before. `<img>` tags are not subject to CORS so the external URL loads without issue.
+
+**Cache-buster:** `?v=41` → `?v=42` (onerror fix) → `?v=43` (promo image).
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |
