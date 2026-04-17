@@ -50,6 +50,21 @@ function sortGroupEntries(entries) {
   }
 }
 
+function updateSortSelectOptions(mode) {
+  const sortSelect = document.getElementById('collection-sort');
+  if (!sortSelect) return;
+  sortSelect.querySelectorAll('option[value^="number"]').forEach(opt => {
+    opt.disabled = mode !== 'grouped';
+    opt.hidden   = mode !== 'grouped';
+  });
+  // If a number sort is active but we've switched to flat view, fall back to rarity_desc
+  if (mode !== 'grouped' && collectionGroupSort.startsWith('number')) {
+    collectionGroupSort = 'rarity_desc';
+    sortSelect.value = collectionGroupSort;
+    localStorage.setItem('collectionGroupSort', collectionGroupSort);
+  }
+}
+
 function setCollectionViewMode(mode) {
   collectionViewMode = mode;
   localStorage.setItem('collectionViewMode', mode);
@@ -61,9 +76,8 @@ function setCollectionViewMode(mode) {
   }
   const btn = document.getElementById('btn-toggle-view');
   if (btn) btn.classList.toggle('active', mode === 'grouped');
-  // Show sort select and reorder button only in grouped mode
-  const sortSelect = document.getElementById('collection-sort');
-  if (sortSelect) sortSelect.classList.toggle('hidden', mode !== 'grouped');
+  // Sort select always visible; number options only make sense in grouped mode
+  updateSortSelectOptions(mode);
   const reorderBtn = document.getElementById('btn-reorder-sets');
   if (reorderBtn) reorderBtn.classList.toggle('hidden', mode !== 'grouped');
   if (mode !== 'grouped' && reorderMode) {
@@ -183,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const sortSelect = document.getElementById('collection-sort');
   if (sortSelect) {
+    updateSortSelectOptions(collectionViewMode);
     sortSelect.value = collectionGroupSort;
     sortSelect.addEventListener('change', () => {
       collectionGroupSort = sortSelect.value;
@@ -343,6 +358,7 @@ function renderPosterCard(e) {
 
       <div class="poster-overlay">
         <div class="poster-name">${e.card.name}</div>
+        ${e.card.rarity ? `<div class="poster-rarity">${e.card.rarity}</div>` : ''}
         <div class="poster-meta">
           <span>${e.card.set_code || ''}${e.card.card_number ? ` · ${e.card.card_number}` : ''}</span>
           ${priceRow}
@@ -401,7 +417,7 @@ function renderCollectionFlat(entries) {
   let totalCards = 0;
   let missingCount = 0;
 
-  collectionGrid.innerHTML = entries.map(e => {
+  collectionGrid.innerHTML = sortGroupEntries(entries).map(e => {
     if (e.quantity === 0) {
       missingCount++;
     } else {

@@ -805,6 +805,15 @@ textarea.input { resize: vertical; min-height: 64px; }
   margin-bottom: 0.25rem;
 }
 
+.poster-rarity {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.42);
+  margin-bottom: 0.18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .poster-meta {
   display: flex;
   align-items: center;
