@@ -752,8 +752,23 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 - `.poster-rarity` CSS class: `font-size: 0.58rem`, `color: rgba(255,255,255,0.42)`, `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`. Placed between `.poster-name` and `.poster-meta` in the overlay.
 - `renderPosterCard` conditionally appends `<div class="poster-rarity">${e.card.rarity}</div>` when `e.card.rarity` is set.
 - Cards with no rarity (some promos) simply omit the element.
+- Initial styling was faint grey text (replaced in Phase 34).
 
 **Cache-buster:** `?v=37` → `?v=38`.
+
+---
+
+### Phase 34 — Sort select always visible fix + rarity chip badge
+
+**Motivation:** After Phase 33, the sort dropdown was still invisible in all modes because the `hidden` class was never removed from the element. Separately, the faint rarity text was hard to read sandwiched between the bold card name and the set/number metadata.
+
+**Sort select visibility fix:**
+- The `<select id="collection-sort">` in `index.html` had `class="sort-select hidden"`. `updateSortSelectOptions(mode)` only ever toggled the number options inside it — it never removed `hidden` from the select itself. Fix: removed the `hidden` class from the HTML entirely. The select is now always visible; `updateSortSelectOptions` continues to disable/hide number-sort options in flat mode.
+
+**Rarity chip badge:**
+- `.poster-rarity` restyled as a frosted-glass pill matching the condition chip aesthetic: `display: inline-block`, `padding: 0.1rem 0.42rem`, `border-radius: 100px`, `font-weight: 600`, `color: rgba(255,255,255,0.9)`, `background: rgba(255,255,255,0.15)`, `border: 1px solid rgba(255,255,255,0.25)`. No JS changes required.
+
+**Cache-buster:** `?v=39` → `?v=40` (sort fix) → `?v=41` (rarity chip).
 
 ---
 

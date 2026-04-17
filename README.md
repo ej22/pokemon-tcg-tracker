@@ -13,6 +13,7 @@ A self-hosted app for tracking your Pokémon TCG card collection. Add your cards
 - **Portfolio** — see your collection's estimated EUR market value, with a chart showing how it's changed over time.
 - **Two modes** — run in *full mode* (prices fetched automatically from CardMarket) or *collection-only mode* (no price lookups — just track what you own, with optional per-card price tracking for the cards that matter).
 - **Grouped view** — browse your collection grouped by set, with collapsible sections showing owned/missing counts. Sort cards within each section by set number or rarity (ascending or descending). Drag sets into a custom order using the reorder button, or use ↑/↓ buttons on touch devices.
+- **Rarity chip** — each card in the poster grid shows its rarity as a small frosted-glass badge in the card overlay, so you can see at a glance how rare each card is.
 - **Card view** — click any card in your collection to open a full-screen view of the artwork alongside the card's details, pricing, and P&L. An Edit button opens the edit modal from there.
 - **Missing cards** — add qty=0 placeholders for cards you don't own yet. They show in a greyed-out "Missing" state so you can see exactly what's left to complete a set.
 - **Trade Binder** — mark cards as available for trade. A dedicated Trade Binder view shows them all in one place with their current market values.
@@ -81,11 +82,14 @@ If the card isn't in PokéWallet (some promos and newer sets), click **Add by Pr
 
 ---
 
-## Grouped view controls
+## Sort and grouped view controls
 
-When the collection is in grouped mode, three extra controls appear in the header bar:
+The **sort dropdown** is always visible in the collection header bar. In flat view, only the rarity options are active (set-number sorting has no meaning without set grouping). In grouped view, all four options are available.
 
-- **Sort dropdown** — sort cards within every set section simultaneously. Options: set number ascending/descending, or rarity low-to-high/high-to-low (with set number as a tiebreaker). Your choice is remembered across reloads.
+- **Sort dropdown** — sort cards simultaneously. Options: set number ascending/descending (grouped view only), or rarity low-to-high/high-to-low (with set number as a tiebreaker). Your choice is remembered across reloads.
+
+When grouped mode is active, two additional controls appear:
+
 - **Reorder sets button** (requires login if auth is enabled) — activates reorder mode. All sections collapse for easy navigation, then on desktop you can drag them into any order using the grip handle on the left of each header. On touch devices, ↑/↓ arrow buttons appear on the right instead. Exiting reorder mode restores each section to its previous collapsed/expanded state. Your custom order persists across reloads.
 - **Show/Hide missing** — toggles visibility of qty=0 placeholder cards across the whole collection.
 
