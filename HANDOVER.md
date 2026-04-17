@@ -739,6 +739,24 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 ---
 
+### Phase 33 — Sort in flat view + rarity indicator on cards
+
+**Motivation:** The sort dropdown was only visible in grouped view. Users wanted to sort by rarity in flat view too (set number sorting doesn't make sense outside a group context). Also, card rarity wasn't visible at a glance in the poster grid.
+
+**Flat-view sort:**
+- `updateSortSelectOptions(mode)` replaces the old hidden-toggle logic in `setCollectionViewMode`. In flat mode it hides and disables the two `option[value^="number_"]` entries and falls back to `rarity_desc` if the current selection was a number sort. In grouped mode it re-enables them.
+- `renderCollectionFlat` now calls `sortGroupEntries(entries)` before mapping, so rarity sort applies across the whole flat list.
+- The sort select is now always visible (in both flat and grouped modes); only the number options are conditionally disabled.
+
+**Rarity indicator on poster cards:**
+- `.poster-rarity` CSS class: `font-size: 0.58rem`, `color: rgba(255,255,255,0.42)`, `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`. Placed between `.poster-name` and `.poster-meta` in the overlay.
+- `renderPosterCard` conditionally appends `<div class="poster-rarity">${e.card.rarity}</div>` when `e.card.rarity` is set.
+- Cards with no rarity (some promos) simply omit the element.
+
+**Cache-buster:** `?v=37` → `?v=38`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |

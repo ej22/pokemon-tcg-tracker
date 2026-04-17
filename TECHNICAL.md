@@ -138,7 +138,7 @@ The frontend stores one additional preference in `localStorage` (not the databas
 | `groupedLayout` | `horizontal`, `grid` | `horizontal` | Horizontal scroll rows vs wrapping grid within set sections |
 | `showMissingCards` | `true`, `false` | `true` | Whether qty=0 placeholder cards are visible in the collection |
 | `setGroupOrder` | JSON array of set IDs | — | Custom display order of set groups in grouped view |
-| `collectionGroupSort` | `number_asc`, `number_desc`, `rarity_asc`, `rarity_desc` | `number_asc` | Sort order for cards within each set group |
+| `collectionGroupSort` | `number_asc`, `number_desc`, `rarity_asc`, `rarity_desc` | `number_asc` | Sort order for cards within each set group (and flat view, where number options are disabled) |
 
 ### Collection entry fields
 
@@ -162,7 +162,7 @@ Price-fetching logic at a glance:
 
 The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no build step, no framework.
 
-**Collection view** — Netflix-style poster grid. Each card shows artwork, condition chip, quantity badge, and price overlay. In full pricing mode, a P&L dot indicates gain/loss vs purchase price. Hover reveals edit/delete buttons. Touch devices use tap-to-reveal. The view can be switched to grouped-by-set mode using the toggle button in the page header.
+**Collection view** — Netflix-style poster grid. Each card shows artwork, condition chip, quantity badge, price overlay, and a small rarity label (`.poster-rarity`). In full pricing mode, a P&L dot indicates gain/loss vs purchase price. Hover reveals edit/delete buttons. Touch devices use tap-to-reveal. The view can be switched to grouped-by-set mode using the toggle button in the page header. A sort dropdown (rarity asc/desc) is available in flat view; set-number sort options are disabled since ordering by number has no meaning without set grouping.
 
 **Grouped view** — Cards organised into collapsible sections per set. Each section header shows the set name, owned/total card count, and (in full mode) the set's EUR value. Cards within each group can be sorted via a dropdown in the page-actions bar (set number ascending/descending or rarity low→high/high→low); choice persists in `localStorage`. Groups wrap cards onto new lines rather than scrolling horizontally. Collapse state persists in `localStorage`. A "Reorder sets" button (arrows icon, requires auth) activates reorder mode: all groups collapse automatically; on desktop, drag handles allow drag-and-drop reordering; on touch, ↑/↓ buttons are shown instead. The custom set order is saved to `localStorage` (`setGroupOrder`) and persists across reloads.
 
