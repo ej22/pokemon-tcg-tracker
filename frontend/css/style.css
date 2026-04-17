@@ -1448,6 +1448,29 @@ textarea.input { resize: vertical; min-height: 64px; }
   color: var(--accent);
 }
 
+/* ── Sort select (grouped collection view) ────────────────────── */
+.sort-select {
+  padding: 0.4rem 2rem 0.4rem 0.75rem;
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.4rem center;
+  background-size: 1rem;
+  transition: background-color var(--duration) var(--ease),
+              border-color var(--duration) var(--ease),
+              color var(--duration) var(--ease);
+  white-space: nowrap;
+}
+.sort-select:hover { background-color: var(--bg-elevated); color: var(--text); }
+.sort-select option { background: var(--bg-surface); color: var(--text); }
+
 /* ── Set group (grouped collection view) ──────────────────────── */
 .set-group-stack {
   display: flex;

@@ -4,12 +4,51 @@ const collectionGrid  = document.getElementById('collection-grid');
 const collectionEmpty = document.getElementById('collection-empty');
 
 // ── View mode (flat grid vs grouped by set) ──────────────────────
-let collectionViewMode = localStorage.getItem('collectionViewMode') || 'flat';
-let showMissingCards   = localStorage.getItem('showMissingCards') !== 'false';
-let reorderMode             = false;
-let _lastEntries            = null;
-let _dragSrcEl              = null;
-let _savedCollapseStates    = null;
+let collectionViewMode   = localStorage.getItem('collectionViewMode') || 'flat';
+let showMissingCards     = localStorage.getItem('showMissingCards') !== 'false';
+let collectionGroupSort  = localStorage.getItem('collectionGroupSort') || 'number_asc';
+let reorderMode          = false;
+let _lastEntries         = null;
+let _dragSrcEl           = null;
+let _savedCollapseStates = null;
+
+// Rarity order: 1 = most common, higher = more rare
+const RARITY_ORDER = {
+  'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Holo Rare': 4,
+  'Art Rare': 5, 'Prism Rare': 6, 'Double Rare': 7, 'Shiny Rare': 8,
+  'Super Rare': 9, 'Ultra Rare': 10, 'Illustration Rare': 11,
+  'Special Art Rare': 12, 'Special Illustration Rare': 13, 'Hyper Rare': 14,
+  'Mega Attack Rare': 15, 'Mega Ultra Rare': 16, 'Mega Hyper Rare': 17,
+  'Promo': 18, 'Code Card': 19,
+};
+
+function cardNumberSortKey(num) {
+  if (!num) return 99999;
+  const m = num.match(/\d+/);
+  return m ? parseInt(m[0], 10) : 99999;
+}
+
+function sortGroupEntries(entries) {
+  const copy = [...entries];
+  switch (collectionGroupSort) {
+    case 'number_desc':
+      return copy.sort((a, b) =>
+        cardNumberSortKey(b.card.card_number) - cardNumberSortKey(a.card.card_number));
+    case 'rarity_asc':
+      return copy.sort((a, b) => {
+        const diff = (RARITY_ORDER[a.card.rarity] ?? 99) - (RARITY_ORDER[b.card.rarity] ?? 99);
+        return diff !== 0 ? diff : cardNumberSortKey(a.card.card_number) - cardNumberSortKey(b.card.card_number);
+      });
+    case 'rarity_desc':
+      return copy.sort((a, b) => {
+        const diff = (RARITY_ORDER[b.card.rarity] ?? 99) - (RARITY_ORDER[a.card.rarity] ?? 99);
+        return diff !== 0 ? diff : cardNumberSortKey(a.card.card_number) - cardNumberSortKey(b.card.card_number);
+      });
+    default: // number_asc
+      return copy.sort((a, b) =>
+        cardNumberSortKey(a.card.card_number) - cardNumberSortKey(b.card.card_number));
+  }
+}
 
 function setCollectionViewMode(mode) {
   collectionViewMode = mode;
@@ -22,7 +61,9 @@ function setCollectionViewMode(mode) {
   }
   const btn = document.getElementById('btn-toggle-view');
   if (btn) btn.classList.toggle('active', mode === 'grouped');
-  // Show reorder button only in grouped mode; exit reorder mode when leaving grouped
+  // Show sort select and reorder button only in grouped mode
+  const sortSelect = document.getElementById('collection-sort');
+  if (sortSelect) sortSelect.classList.toggle('hidden', mode !== 'grouped');
   const reorderBtn = document.getElementById('btn-reorder-sets');
   if (reorderBtn) reorderBtn.classList.toggle('hidden', mode !== 'grouped');
   if (mode !== 'grouped' && reorderMode) {
@@ -139,6 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
     setCollectionViewMode(collectionViewMode === 'flat' ? 'grouped' : 'flat');
     loadCollection();
   });
+
+  const sortSelect = document.getElementById('collection-sort');
+  if (sortSelect) {
+    sortSelect.value = collectionGroupSort;
+    sortSelect.addEventListener('change', () => {
+      collectionGroupSort = sortSelect.value;
+      localStorage.setItem('collectionGroupSort', collectionGroupSort);
+      if (_lastEntries) renderCollection(_lastEntries);
+    });
+  }
 
   const btnReorder = document.getElementById('btn-reorder-sets');
   if (btnReorder) {
@@ -412,7 +463,7 @@ function renderCollectionGrouped(entries) {
   const htmlParts = sorted.map(([setId, group], idx) => {
     let groupValue = 0;
 
-    const cardsHtml = group.entries.map(e => {
+    const cardsHtml = sortGroupEntries(group.entries).map(e => {
       if (e.quantity > 0) {
         const pricingOn = entryPricingOn(e);
         const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
