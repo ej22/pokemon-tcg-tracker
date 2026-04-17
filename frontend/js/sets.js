@@ -52,7 +52,7 @@ function renderSetsGrid(sets) {
            aria-label="${s.name}"
            onclick="openSetDetail(${JSON.stringify(s).replace(/"/g, '&quot;')})"
            onkeydown="if(event.key==='Enter')openSetDetail(${JSON.stringify(s).replace(/"/g, '&quot;')})">
-        <img src="${imageUrl}" alt="${s.name}" onerror="this.parentElement.innerHTML=setPlaceholder('${code}')">
+        <img src="${imageUrl}" alt="${s.name}" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('afterbegin',setPlaceholder('${code}'))">
 
         <div class="poster-badges">
           <span class="poster-qty-badge">${s.owned_count} owned</span>
