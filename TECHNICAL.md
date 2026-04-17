@@ -138,6 +138,7 @@ The frontend stores one additional preference in `localStorage` (not the databas
 | `groupedLayout` | `horizontal`, `grid` | `horizontal` | Horizontal scroll rows vs wrapping grid within set sections |
 | `showMissingCards` | `true`, `false` | `true` | Whether qty=0 placeholder cards are visible in the collection |
 | `setGroupOrder` | JSON array of set IDs | — | Custom display order of set groups in grouped view |
+| `collectionGroupSort` | `number_asc`, `number_desc`, `rarity_asc`, `rarity_desc` | `number_asc` | Sort order for cards within each set group |
 
 ### Collection entry fields
 
@@ -163,7 +164,7 @@ The frontend is a single-page vanilla HTML/JS/CSS app served by Caddy — no bui
 
 **Collection view** — Netflix-style poster grid. Each card shows artwork, condition chip, quantity badge, and price overlay. In full pricing mode, a P&L dot indicates gain/loss vs purchase price. Hover reveals edit/delete buttons. Touch devices use tap-to-reveal. The view can be switched to grouped-by-set mode using the toggle button in the page header.
 
-**Grouped view** — Cards organised into collapsible sections per set. Each section header shows the set name, owned/total card count, and (in full mode) the set's EUR value. Sections can be set to horizontal scroll rows (default) or a wrapping grid via Settings. Collapse state persists in `localStorage`. A "Reorder sets" button (arrows icon, requires auth) in the collection header activates reorder mode: all groups collapse automatically for easier navigation; on desktop, a drag handle appears on each group header and groups can be dragged into a custom order; on touch devices, ↑/↓ buttons replace the drag handle. The previous collapse states are restored on exit. The custom order is saved to `localStorage` (`setGroupOrder`) and persists across reloads.
+**Grouped view** — Cards organised into collapsible sections per set. Each section header shows the set name, owned/total card count, and (in full mode) the set's EUR value. Cards within each group can be sorted via a dropdown in the page-actions bar (set number ascending/descending or rarity low→high/high→low); choice persists in `localStorage`. Groups wrap cards onto new lines rather than scrolling horizontally. Collapse state persists in `localStorage`. A "Reorder sets" button (arrows icon, requires auth) activates reorder mode: all groups collapse automatically; on desktop, drag handles allow drag-and-drop reordering; on touch, ↑/↓ buttons are shown instead. The custom set order is saved to `localStorage` (`setGroupOrder`) and persists across reloads.
 
 **Settings modal** — Gear icon in the sidebar footer (desktop), topbar (tablet 601–1023px), or a dedicated fixed button in the top-right corner (phone portrait ≤600px — `btn-settings-mobile`, `position: fixed; top: 0.75rem; right: 0.75rem`). Controls pricing mode and grouped layout. Switching to full pricing mode shows a warning about API rate limits.
 

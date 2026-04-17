@@ -709,6 +709,36 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 ---
 
+### Phase 31 — Set group row wrapping
+
+**Problem:** With large sets, cards in the grouped view's horizontal layout overflowed the viewport, requiring horizontal scrolling. Most noticeable at 1440p and worse at lower resolutions.
+
+**Fix:** Removed `overflow-x: auto`, `scroll-snap-type`, `-webkit-overflow-scrolling`, and the custom scrollbar styles from `.set-group-row`. Replaced with `flex-wrap: wrap` so cards flow onto new lines when they reach the container edge. The `.set-group-row .poster-card` rule retains `flex-shrink: 0; width: 148px` so card sizes are unchanged.
+
+**Cache-buster:** `?v=35` → `?v=36`.
+
+---
+
+### Phase 32 — Sort cards within set groups
+
+**Motivation:** Cards within each set group appeared in arbitrary insertion order. Users wanted to sort by set number or rarity.
+
+**Sort dropdown (`#collection-sort`):**
+- `<select>` element in the collection page-actions bar, styled to match `.btn-secondary` (`.sort-select` CSS class, `appearance: none` with a custom SVG chevron arrow).
+- Hidden in flat view; shown in grouped view (toggled by `setCollectionViewMode`, same pattern as the reorder button).
+- Four options: **№ Asc** (default), **№ Desc**, **Rarity ↑** (Common first), **Rarity ↓** (Hyper Rare first).
+- Selection persists in `localStorage` under `collectionGroupSort`.
+
+**Sort logic (`collection.js`):**
+- `cardNumberSortKey(num)` — extracts the first integer from any card number format (`116/159` → 116, `SWSH050` → 50, `JTG 116` → 116, `167` → 167). Cards without a number sort last (key 99999).
+- `RARITY_ORDER` — 19-entry map assigning a numeric tier to each rarity string found in the DB (Common=1 … Hyper Rare=14, Promo=18, Code Card=19).
+- `sortGroupEntries(entries)` — returns a sorted copy of the entries array for the active sort mode. Rarity sorts use card number as a tiebreaker within the same rarity tier.
+- Applied in `renderCollectionGrouped` by replacing `group.entries.map(...)` with `sortGroupEntries(group.entries).map(...)`. Sorting happens at render time from `_lastEntries` — no API call on sort change.
+
+**Cache-buster:** `?v=36` → `?v=37`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |
