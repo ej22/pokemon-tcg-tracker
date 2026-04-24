@@ -786,6 +786,16 @@ Discovered while investigating a missing card (Tyrunt MEP070):
 
 **Cache-buster:** `?v=41` → `?v=42` (onerror fix) → `?v=43` (promo image).
 
+### Phase 36 — Optimistic DOM removal for Trade Binder actions
+
+**Motivation:** Removing a card from the Trade Binder (via the trade-icon button or the delete button) required a full page refresh before the card disappeared. This was because `toggleForTrade` and `deleteEntry` both called `loadCollection()` after the API call, which re-renders the collection view but never touches `#trade-binder-grid`.
+
+**Fix:** Added `removeCardFromDOM(event)` in `collection.js` that uses `event.target.closest('[data-entry]')` to find the card element and remove it instantly before the API call is awaited. Both `toggleForTrade` (when `currentValue` is true) and `deleteEntry` call it immediately, so the card disappears on click. The subtitle count and empty-state visibility are updated at the same time.
+
+Both call sites for `deleteEntry` (`renderPosterCard` in `collection.js` and `renderTradePosterCard` in `trade-binder.js`) were updated to pass `event` as the first argument.
+
+**Cache-buster:** `?v=43` → `?v=44`.
+
 ---
 
 ## 3. Architecture Decisions
