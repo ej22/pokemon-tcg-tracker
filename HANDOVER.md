@@ -796,6 +796,14 @@ Both call sites for `deleteEntry` (`renderPosterCard` in `collection.js` and `re
 
 **Cache-buster:** `?v=43` → `?v=44`.
 
+### Phase 37 — Live search bar on collection view
+
+**Motivation:** With large collections it is slow to visually scan for a specific card. A live substring search lets the user type a partial name (e.g. `clef`) and instantly see all matching cards (Clefairy, Clefable, Mega Clefable, etc.) regardless of position in the name.
+
+**Implementation:** Entirely client-side — no backend change. A `<input type="search" id="collection-search">` was added to the collection toolbar. In `collection.js`, module-level `collectionSearchQuery` holds the current query. `filterEntries()` does a case-insensitive `String.includes()` against `card.name`. `renderCollection` was refactored to accept the full unfiltered `_lastEntries` and apply the filter before dispatching to the flat/grouped renderers. Empty groups disappear naturally since the grouping loop only processes entries that passed the filter. The subtitle updates to show `X of Y matching "query"`. Sidebar stats always reflect the full collection (computed from unfiltered data). Escape clears the query. No backend or DB change.
+
+**Cache-buster:** `?v=44` → `?v=45`.
+
 ---
 
 ## 3. Architecture Decisions
