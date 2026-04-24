@@ -11,6 +11,7 @@ let reorderMode          = false;
 let _lastEntries         = null;
 let _dragSrcEl           = null;
 let _savedCollapseStates = null;
+let collectionSearchQuery = '';
 
 // Rarity order: 1 = most common, higher = more rare
 const RARITY_ORDER = {
@@ -224,6 +225,22 @@ document.addEventListener('DOMContentLoaded', () => {
       applyMissingFilter();
     });
   }
+
+  const searchInput = document.getElementById('collection-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      collectionSearchQuery = searchInput.value;
+      if (_lastEntries) renderCollection(_lastEntries);
+    });
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        collectionSearchQuery = '';
+        searchInput.value = '';
+        searchInput.blur();
+        if (_lastEntries) renderCollection(_lastEntries);
+      }
+    });
+  }
 });
 
 async function loadCollection() {
@@ -367,24 +384,34 @@ function renderPosterCard(e) {
     </div>`;
 }
 
-function renderCollection(entries) {
+function filterEntries(entries) {
+  const q = collectionSearchQuery.trim().toLowerCase();
+  if (!q) return entries;
+  return entries.filter(e => (e.card.name || '').toLowerCase().includes(q));
+}
+
+function renderCollection(allEntries) {
+  const entries = filterEntries(allEntries);
   const subtitle = document.getElementById('collection-subtitle');
 
-  // Separate owned from missing (qty=0)
-  const owned   = entries.filter(e => e.quantity > 0);
-  const missing = entries.filter(e => e.quantity === 0);
+  // Separate owned from missing (qty=0) using unfiltered data for subtitle/sidebar accuracy
+  const allOwned   = allEntries.filter(e => e.quantity > 0);
+  const allMissing = allEntries.filter(e => e.quantity === 0);
 
+  const q = collectionSearchQuery.trim();
   if (subtitle) {
-    if (entries.length === 0) {
+    if (allEntries.length === 0) {
       subtitle.textContent = 'No cards yet';
+    } else if (q && entries.length !== allEntries.length) {
+      subtitle.textContent = `${entries.length} of ${allEntries.length} matching "${q}"`;
     } else {
-      const parts = [`${owned.length} entr${owned.length === 1 ? 'y' : 'ies'}`];
-      if (missing.length) parts.push(`${missing.length} missing`);
+      const parts = [`${allOwned.length} entr${allOwned.length === 1 ? 'y' : 'ies'}`];
+      if (allMissing.length) parts.push(`${allMissing.length} missing`);
       subtitle.textContent = parts.join(' · ');
     }
   }
 
-  if (!entries.length) {
+  if (!allEntries.length) {
     collectionGrid.innerHTML = '';
     collectionGrid.classList.add('hidden');
     collectionEmpty.classList.remove('hidden');
@@ -395,9 +422,22 @@ function renderCollection(entries) {
   collectionEmpty.classList.add('hidden');
   collectionGrid.classList.remove('hidden');
 
-  // Show/hide the missing toggle button
+  // Show/hide the missing toggle button (based on unfiltered data)
   const btnMissing = document.getElementById('btn-toggle-missing');
-  if (btnMissing) btnMissing.classList.toggle('hidden', missing.length === 0);
+  if (btnMissing) btnMissing.classList.toggle('hidden', allMissing.length === 0);
+
+  // No results for current search query
+  if (!entries.length) {
+    collectionGrid.classList.remove('set-group-stack', 'reorder-mode');
+    collectionGrid.classList.add('card-grid');
+    collectionGrid.innerHTML = `<p class="collection-search-empty">No cards match <strong>"${q}"</strong></p>`;
+    updateSidebarStats(
+      allOwned.reduce((s, e) => s + e.quantity, 0),
+      null,
+      allMissing.length
+    );
+    return;
+  }
 
   if (collectionViewMode === 'grouped') {
     collectionGrid.classList.remove('card-grid');
@@ -408,6 +448,19 @@ function renderCollection(entries) {
     collectionGrid.classList.remove('set-group-stack', 'reorder-mode');
     collectionGrid.classList.add('card-grid');
     renderCollectionFlat(entries);
+  }
+
+  // When a search query is active, keep sidebar stats reflecting the full collection
+  if (q) {
+    const isCollOnly = window.appSettings?.pricing_mode === 'collection_only';
+    let totalValue = 0;
+    for (const e of allOwned) {
+      const pricingOn = !isCollOnly || e.track_price || e.for_trade;
+      const price = pricingOn ? bestPrice(e.prices, e.variant) : null;
+      if (price != null) totalValue += parseFloat(price) * e.quantity;
+    }
+    const totalCards = allOwned.reduce((s, e) => s + e.quantity, 0);
+    updateSidebarStats(totalCards, totalValue > 0 ? totalValue : null, allMissing.length);
   }
 }
 

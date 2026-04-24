@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTCG Tracker</title>
-  <link rel="stylesheet" href="css/style.css?v=44" />
+  <link rel="stylesheet" href="css/style.css?v=45" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -118,6 +118,7 @@
           <p class="page-subtitle" id="collection-subtitle">Loading cards…</p>
         </div>
         <div class="page-actions">
+          <input type="search" id="collection-search" class="collection-search" placeholder="Search name…" autocomplete="off" aria-label="Search cards by name" />
           <button class="btn btn-secondary btn-icon-only hidden" id="btn-toggle-missing" aria-label="Toggle missing cards" title="Show/Hide missing cards">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
           </button>
@@ -907,7 +908,7 @@
 
 <script src="js/app.js?v=44"></script>
 <script src="js/onboarding.js?v=44"></script>
-<script src="js/collection.js?v=44"></script>
+<script src="js/collection.js?v=45"></script>
 <script src="js/search.js?v=44"></script>
 <script src="js/portfolio.js?v=44"></script>
 <script src="js/sets.js?v=44"></script>
