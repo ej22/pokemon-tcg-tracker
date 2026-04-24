@@ -384,10 +384,38 @@ function renderPosterCard(e) {
     </div>`;
 }
 
+const RARITY_ALIASES = {
+  'c':   'Common',
+  'u':   'Uncommon',
+  'r':   'Rare',
+  'hr':  'Holo Rare',
+  'ar':  'Art Rare',
+  'pr':  'Promo',
+  'dr':  'Double Rare',
+  'shr': 'Shiny Rare',
+  'sr':  'Super Rare',
+  'ur':  'Ultra Rare',
+  'ir':  'Illustration Rare',
+  'sar': 'Special Art Rare',
+  'sir': 'Special Illustration Rare',
+  'hypr':'Hyper Rare',
+  'mar': 'Mega Attack Rare',
+  'mur': 'Mega Ultra Rare',
+  'mhr': 'Mega Hyper Rare',
+  'cc':  'Code Card',
+};
+
 function filterEntries(entries) {
   const q = collectionSearchQuery.trim().toLowerCase();
   if (!q) return entries;
-  return entries.filter(e => (e.card.name || '').toLowerCase().includes(q));
+  const expandedRarity = RARITY_ALIASES[q] || null;
+  return entries.filter(e => {
+    const name   = (e.card.name   || '').toLowerCase();
+    const rarity = (e.card.rarity || '').toLowerCase();
+    return name.includes(q)
+      || rarity.includes(q)
+      || (expandedRarity && (e.card.rarity || '') === expandedRarity);
+  });
 }
 
 function renderCollection(allEntries) {
