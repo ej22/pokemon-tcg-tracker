@@ -168,7 +168,7 @@ Disambiguation case (multiple sets matched): `{"sets": [...]}` with no `"cards"`
 | File | Responsibility |
 |------|---------------|
 | `app.js` | Routing, `apiFetch()`, toasts, settings modal, auth modal, `requireAuth()`, sidebar stats |
-| `collection.js` | Poster grid, grouped-by-set view, collapsible sections, card-view lightbox, edit/delete |
+| `collection.js` | Poster grid, grouped-by-set view, collapsible sections, card-view lightbox, edit/delete, live search (name + rarity + aliases) |
 | `search.js` | Search modal, add-card form, PriceCharting URL flow |
 | `sets.js` | Sets grid, set detail, `renderSetCards()` with owned/unowned styling, "Track all missing" |
 | `portfolio.js` | KPIs, Chart.js value history |

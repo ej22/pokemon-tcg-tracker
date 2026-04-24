@@ -798,11 +798,28 @@ Both call sites for `deleteEntry` (`renderPosterCard` in `collection.js` and `re
 
 ### Phase 37 — Live search bar on collection view
 
-**Motivation:** With large collections it is slow to visually scan for a specific card. A live substring search lets the user type a partial name (e.g. `clef`) and instantly see all matching cards (Clefairy, Clefable, Mega Clefable, etc.) regardless of position in the name.
+**Motivation:** With large collections it is slow to visually scan for a specific card. A live substring search lets the user type a partial name (e.g. `clef`) and instantly see all matching cards (Clefairy, Clefable, Mega Clefable, etc.) regardless of position in the name. Rarity filtering was added so users can quickly pull up all cards of a given rarity using either the full name or a short alias.
 
-**Implementation:** Entirely client-side — no backend change. A `<input type="search" id="collection-search">` was added to the collection toolbar. In `collection.js`, module-level `collectionSearchQuery` holds the current query. `filterEntries()` does a case-insensitive `String.includes()` against `card.name`. `renderCollection` was refactored to accept the full unfiltered `_lastEntries` and apply the filter before dispatching to the flat/grouped renderers. Empty groups disappear naturally since the grouping loop only processes entries that passed the filter. The subtitle updates to show `X of Y matching "query"`. Sidebar stats always reflect the full collection (computed from unfiltered data). Escape clears the query. No backend or DB change.
+**Implementation:** Entirely client-side — no backend change. A `<input type="search" id="collection-search">` was added to the collection toolbar. In `collection.js`, module-level `collectionSearchQuery` holds the current query. `filterEntries()` tests each entry against three conditions (any one match passes):
 
-**Cache-buster:** `?v=44` → `?v=45`.
+1. `card.name` contains the query (case-insensitive substring)
+2. `card.rarity` contains the query (case-insensitive substring — e.g. `illustration` matches Illustration Rare and Special Illustration Rare)
+3. The query exactly matches a key in `RARITY_ALIASES`, which maps short codes to full rarity strings for an exact rarity match
+
+`RARITY_ALIASES` covers all rarities in `RARITY_ORDER`:
+
+| Alias | Rarity |
+|-------|--------|
+| `c` | Common | `u` | Uncommon | `r` | Rare |
+| `hr` | Holo Rare | `ar` | Art Rare | `dr` | Double Rare |
+| `shr` | Shiny Rare | `sr` | Super Rare | `ur` | Ultra Rare |
+| `ir` | Illustration Rare | `sar` | Special Art Rare | `sir` | Special Illustration Rare |
+| `hypr` | Hyper Rare | `mar` | Mega Attack Rare | `mur` | Mega Ultra Rare |
+| `mhr` | Mega Hyper Rare | `pr` | Promo | `cc` | Code Card |
+
+`renderCollection` was refactored to accept the full unfiltered `_lastEntries` and apply the filter before dispatching to the flat/grouped renderers. Empty groups disappear naturally since the grouping loop only processes entries that passed the filter. The subtitle updates to show `X of Y matching "query"`. Sidebar stats always reflect the full collection (computed from unfiltered data). Escape clears the query.
+
+**Cache-buster:** `?v=44` → `?v=45` (search input + filter), `?v=45` → `?v=46` (rarity + alias search).
 
 ---
 
