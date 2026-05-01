@@ -615,8 +615,8 @@ function renderCollectionGrouped(entries) {
       return renderPosterCard(e);
     }).join('');
 
-    const ownedCount   = group.entries.filter(e => e.quantity > 0).reduce((s, e) => s + e.quantity, 0);
-    const missingCount = group.entries.filter(e => e.quantity === 0).length;
+    const ownedCount   = new Set(group.entries.filter(e => e.quantity > 0).map(e => e.card.api_id)).size;
+    const missingCount = new Set(group.entries.filter(e => e.quantity === 0).map(e => e.card.api_id)).size;
     const totalInSet   = group.setCardCount;
 
     let countLabel;

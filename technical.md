@@ -58,7 +58,7 @@ Key rules:
 |--------|------|-------------|
 | GET | `/api/sets` | All sets (weekly-cached from PokéWallet) |
 | GET | `/api/sets/mine` | Sets the user has collection entries in, with `owned_count` |
-| GET | `/api/sets/{set_id}/cards` | All cards in a set. Fetches from API if cache is incomplete AND `auto_fetch_full_set` is enabled; otherwise serves from DB. Returns `CardOut + owned_quantity` |
+| GET | `/api/sets/{set_id}/cards` | All cards in a set. Fetches from API if cache is incomplete AND `auto_fetch_full_set` is enabled; otherwise serves from DB. Returns `CardOut + owned_quantity`. Non-card products (no `card_number` + no `card_type`) are excluded. |
 | GET | `/api/sets/{set_code}/image` | Set artwork proxy (7-day browser cache) |
 
 ### Collection
@@ -170,7 +170,7 @@ Disambiguation case (multiple sets matched): `{"sets": [...]}` with no `"cards"`
 | `app.js` | Routing, `apiFetch()`, toasts, settings modal, auth modal, `requireAuth()`, sidebar stats |
 | `collection.js` | Poster grid, grouped-by-set view, collapsible sections, card-view lightbox, edit/delete, live search (name + rarity + aliases), variant badge, duplicate-entry grouping |
 | `search.js` | Search modal, add-card form, PriceCharting URL flow |
-| `sets.js` | Sets grid, set detail, `renderSetCards()` with owned/unowned styling, "Track all missing" |
+| `sets.js` | Sets grid, set detail, `renderSetCards()` with owned/unowned styling + "X / Y collected" progress badge, "Track all missing" |
 | `portfolio.js` | KPIs, Chart.js value history |
 | `trade-binder.js` | Trade binder view (filtered to `for_trade=true` cards) |
 
@@ -181,6 +181,7 @@ Disambiguation case (multiple sets matched): `{"sets": [...]}` with no `"cards"`
 - Cache-busting: `?v=N` suffix on all JS/CSS `<script>`/`<link>` tags — bump `N` whenever frontend files change
 - `groupEntriesByCardVariant(entries)` — merges collection entries with the same `card_api_id + variant` into a single display card with summed quantity. Only affects owned entries (qty > 0); missing placeholders are left ungrouped. Merged cards store group entry IDs in `data-group-ids` for bulk delete.
 - Variant badge (`.poster-variant`) — blue-tinted pill shown in the overlay next to the rarity badge. Formatted by `variantLabel()` (e.g. `reverse_holo` → "Rev. Holo").
+- Set group header owned/missing counts use `new Set(...map(e => e.card.api_id)).size` — counts distinct cards, not variant entries or quantity totals.
 
 **Pricing mode (`window.appSettings.pricing_mode`):**
 - `"full"` — prices shown everywhere, fetched on add/update

@@ -179,9 +179,12 @@ async def get_set_cards(set_id: str, session: AsyncSession = Depends(get_db)):
     )
     owned_map = {row.card_api_id: int(row.total_qty) for row in ownership_result}
 
+    # Exclude non-card products (e.g. blister packs, tins) — they have no card_number and no card_type.
+    actual_cards = [c for c in cards if (c.card_number or "").strip() or (c.card_type or "").strip()]
+
     return [
         {**CardOut.model_validate(c).model_dump(), "owned_quantity": owned_map.get(c.api_id, 0)}
-        for c in cards
+        for c in actual_cards
     ]
 
 

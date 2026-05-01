@@ -95,11 +95,20 @@ async function openSetDetail(set) {
   }
 }
 
+const setDetailProgress = document.getElementById('set-detail-progress');
+
 function renderSetCards(cards) {
   // Disconnect any previous observer so stale img elements are released
   if (_imageObserver) {
     _imageObserver.disconnect();
     _imageObserver = null;
+  }
+
+  // Update collected progress badge
+  if (setDetailProgress) {
+    const owned = cards.filter(c => (c.owned_quantity || 0) > 0).length;
+    const total = cards.length;
+    setDetailProgress.textContent = total ? `${owned} / ${total} collected` : '';
   }
 
   if (!cards.length) {
@@ -191,6 +200,7 @@ btnBackSets.addEventListener('click', () => {
   setDetail.classList.add('hidden');
   setsGrid.classList.remove('hidden');
   if (btnBulkMissing) btnBulkMissing.classList.add('hidden');
+  if (setDetailProgress) setDetailProgress.textContent = '';
   if (_imageObserver) { _imageObserver.disconnect(); _imageObserver = null; }
   _currentSet = null;
 });

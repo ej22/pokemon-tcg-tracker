@@ -841,6 +841,30 @@ Both call sites for `deleteEntry` (`renderPosterCard` in `collection.js` and `re
 
 ---
 
+### Phase 39 — Set card filtering + set detail progress + grouped view owned count fix
+
+**Three related fixes for the sets and collection views.**
+
+**Backend — filter non-card products from set detail (`backend/routers/sets.py`):**
+- PokéWallet's set API returns non-card products (blister packs, art tins, checklane blisters, etc.) alongside actual cards. These items have no `card_number` and no `card_type`.
+- `get_set_cards` now filters out any card row where both `card_number` and `card_type` are empty/null before returning. Legitimate promo cards (which may have no `card_type`) are kept as long as they have a `card_number`.
+- Example: "Perfect Order Premium Checklane Blister" entries are excluded; "Tyrunt (ME03 070)" (no card_type, but has card_number `70`) is kept.
+
+**Frontend — "X / Y collected" progress badge in set detail (`frontend/js/sets.js`, `frontend/index.html`):**
+- A `<span id="set-detail-progress">` element added to the set detail header, positioned after the set title.
+- `renderSetCards()` computes `owned = cards.filter(c => c.owned_quantity > 0).length` and `total = cards.length` (post-filter), then writes `"X / Y collected"` into the span.
+- The span is cleared when navigating back to the sets grid.
+
+**Frontend — fix owned/missing count in grouped collection section headers (`frontend/js/collection.js`):**
+- Previously, `ownedCount` in the set group header was computed as the sum of quantities across all collection entries in the group. This meant a Normal + Holo of the same card counted as 2 owned, and the "X / Y cards" label was inflated.
+- Fixed by counting distinct `card_api_id` values: `new Set(group.entries.filter(e => e.quantity > 0).map(e => e.card.api_id)).size`.
+- Same fix applied to `missingCount` for consistency.
+- Card display is unchanged — variants still appear as separate poster cards.
+
+**Cache-busters:** `collection.js` `?v=47` → `?v=48`, `sets.js` `?v=44` → `?v=45`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |
