@@ -823,6 +823,24 @@ Both call sites for `deleteEntry` (`renderPosterCard` in `collection.js` and `re
 
 ---
 
+### Phase 38 — Variant badge + duplicate-entry grouping on collection view
+
+**Motivation:** Two related UX gaps: (1) no visible indicator of whether a collection card is Normal or Holo, and (2) duplicate entries for the same card+variant appeared as separate cards instead of one consolidated card.
+
+**Implementation:**
+
+**Variant badge** — `renderPosterCard` now renders a `.poster-variant` pill badge (blue-tinted, styled like the rarity badge) in the card's bottom overlay. The `variantLabel()` helper converts raw variant strings to display names (e.g. `reverse_holo` → "Rev. Holo", `holo` → "Holo", `normal` → "Normal"). The rarity and variant pills are wrapped in a `.poster-rarity-row` flex container so they flow side-by-side cleanly.
+
+**Duplicate grouping** — `groupEntriesByCardVariant(entries)` groups owned (qty > 0) entries that share the same `card_api_id + variant` key into a single display card. Quantities are summed; the first/primary entry's other fields (condition, prices, etc.) represent the group. Missing placeholder entries (qty = 0) are left ungrouped. This function is applied in both `renderCollectionFlat` and the per-set card loop in `renderCollectionGrouped` before sorting/rendering.
+
+**Grouped delete** — Merged cards store all constituent entry IDs in a `data-group-ids` JSON attribute. The delete button calls `deleteEntries(event, groupIdsStr)` which parses the array, confirms "Remove all N copies?", and DELETE-s each entry ID sequentially. Single-entry cards continue to call the original `deleteEntry(event, id)`.
+
+**Edit on merged cards** — Opens the edit modal for the primary entry only (first in group). This is intentional: if the user needs to change individual entries within a group they do so by adding/editing from the normal flow.
+
+**Cache-buster:** `style.css` `?v=45` → `?v=46`, `collection.js` `?v=46` → `?v=47`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |

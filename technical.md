@@ -168,7 +168,7 @@ Disambiguation case (multiple sets matched): `{"sets": [...]}` with no `"cards"`
 | File | Responsibility |
 |------|---------------|
 | `app.js` | Routing, `apiFetch()`, toasts, settings modal, auth modal, `requireAuth()`, sidebar stats |
-| `collection.js` | Poster grid, grouped-by-set view, collapsible sections, card-view lightbox, edit/delete, live search (name + rarity + aliases) |
+| `collection.js` | Poster grid, grouped-by-set view, collapsible sections, card-view lightbox, edit/delete, live search (name + rarity + aliases), variant badge, duplicate-entry grouping |
 | `search.js` | Search modal, add-card form, PriceCharting URL flow |
 | `sets.js` | Sets grid, set detail, `renderSetCards()` with owned/unowned styling, "Track all missing" |
 | `portfolio.js` | KPIs, Chart.js value history |
@@ -179,6 +179,8 @@ Disambiguation case (multiple sets matched): `{"sets": [...]}` with no `"cards"`
 - `requireAuth()` — returns immediately if token valid; otherwise shows login modal and queues a Promise
 - `poster-card--missing` CSS class — grayscale(0.85) + opacity 0.5 on image; opacity 0.5 on overlay. Used for both zero-quantity collection placeholders and unowned cards in set detail
 - Cache-busting: `?v=N` suffix on all JS/CSS `<script>`/`<link>` tags — bump `N` whenever frontend files change
+- `groupEntriesByCardVariant(entries)` — merges collection entries with the same `card_api_id + variant` into a single display card with summed quantity. Only affects owned entries (qty > 0); missing placeholders are left ungrouped. Merged cards store group entry IDs in `data-group-ids` for bulk delete.
+- Variant badge (`.poster-variant`) — blue-tinted pill shown in the overlay next to the rarity badge. Formatted by `variantLabel()` (e.g. `reverse_holo` → "Rev. Holo").
 
 **Pricing mode (`window.appSettings.pricing_mode`):**
 - `"full"` — prices shown everywhere, fetched on add/update
