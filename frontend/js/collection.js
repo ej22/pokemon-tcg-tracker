@@ -29,6 +29,16 @@ function cardNumberSortKey(num) {
   return m ? parseInt(m[0], 10) : 99999;
 }
 
+function recentSortKey(e) {
+  const list = e._groupEntries ?? [e];
+  let max = 0;
+  for (const x of list) {
+    const t = x.created_at ? Date.parse(x.created_at) : 0;
+    if (t > max) max = t;
+  }
+  return max;
+}
+
 function sortGroupEntries(entries) {
   const copy = [...entries];
   switch (collectionGroupSort) {
@@ -45,6 +55,10 @@ function sortGroupEntries(entries) {
         const diff = (RARITY_ORDER[b.card.rarity] ?? 99) - (RARITY_ORDER[a.card.rarity] ?? 99);
         return diff !== 0 ? diff : cardNumberSortKey(a.card.card_number) - cardNumberSortKey(b.card.card_number);
       });
+    case 'recent_desc':
+      return copy.sort((a, b) => recentSortKey(b) - recentSortKey(a));
+    case 'recent_asc':
+      return copy.sort((a, b) => recentSortKey(a) - recentSortKey(b));
     default: // number_asc
       return copy.sort((a, b) =>
         cardNumberSortKey(a.card.card_number) - cardNumberSortKey(b.card.card_number));

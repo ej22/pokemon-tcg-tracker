@@ -865,6 +865,24 @@ Both call sites for `deleteEntry` (`renderPosterCard` in `collection.js` and `re
 
 ---
 
+### Phase 40 — Sort collection by recently added
+
+**Motivation:** Users wanted to always see their latest cards first — useful for showcasing recent additions without hunting through the full collection.
+
+**Implementation:** Pure frontend change. `created_at` was already present on every `CollectionEntryOut` (exposed by `_enrich_entry` in `routers/collection.py`).
+
+**`frontend/js/collection.js`:**
+- `recentSortKey(e)` helper: returns the maximum `Date.parse(created_at)` across all constituent entries in a merged group (`e._groupEntries ?? [e]`). Using the max means adding another copy of a card does not bump its position — only a fresh `add_to_collection` (which creates a new entry with a new `created_at`) does.
+- Two new cases in `sortGroupEntries`: `recent_desc` (newest first, default choice) and `recent_asc` (oldest first).
+
+**`frontend/index.html`:**
+- Two new `<option>` entries in `<select id="collection-sort">`: "Recently added" (`recent_desc`) and "Oldest added" (`recent_asc`).
+- Both options work in flat and grouped views — no `updateSortSelectOptions` changes needed (unlike number-sort options which are restricted to grouped mode).
+
+**Cache-buster:** `collection.js` `?v=48` → `?v=49`.
+
+---
+
 ## 3. Architecture Decisions
 
 | Decision | Rationale |
